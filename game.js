@@ -32,6 +32,15 @@ let doubleJumpUsed = false;
 
 const PW_DURATION = { shield: 360, speed: 360, doublejump: 480 };  // 6s / 6s / 8s
 
+// ─── RTO Timer ────────────────────────────────────────────────────────────────
+const RTO_MAX_FRAMES = 300 * 60;  // 5 minutes at 60fps
+let rtoFrames = RTO_MAX_FRAMES;
+let gameOverCause = 'lives';
+const SITE_URL = 'https://anystackarchitect.com';
+let runDeaths = 0;
+let checkpointsActivated = 0;
+let runStartedAt = 0;
+
 function startGame() {
   gameState       = 'playing';
   levelComplete   = false;
@@ -40,6 +49,15 @@ function startGame() {
   checkpoint      = null;
   pw.shield = pw.speed = pw.doublejump = 0;
   doubleJumpUsed  = false;
+  rtoFrames       = RTO_MAX_FRAMES;
+  gameOverCause   = 'lives';
+  particles.length = 0;
+  floatingTexts.length = 0;
+  shakeMag = 0;
+  shakeDur = 0;
+  runDeaths = 0;
+  checkpointsActivated = 0;
+  runStartedAt = Date.now();
   loadLevel('1-1');
   entities.init(world);
   respawn();
@@ -48,8 +66,10 @@ function startGame() {
 
 function loseLife() {
   sfxDeath();
+  runDeaths++;
   lives--;
   if (lives <= 0) {
+    gameOverCause = 'lives';
     gameState = 'gameover';
     saveBestScore();
     Music.stop();
@@ -64,7 +84,14 @@ document.addEventListener('keydown', e => {
   keys[e.code] = true;
   e.preventDefault();
   if (gameState === 'title')    { startGame(); return; }
-  if (gameState === 'complete') { startGame(); return; }
+  if (gameState === 'complete') {
+    if (e.code === 'Enter' || e.code === 'KeyL') {
+      window.open(SITE_URL, '_blank', 'noopener');
+      return;
+    }
+    startGame();
+    return;
+  }
   if (gameState === 'gameover') { startGame(); return; }
   if (gameState === 'playing'  && e.code === 'Escape') { gameState = 'paused';  sfxPause(); return; }
   if (gameState === 'paused'   && e.code === 'Escape') { gameState = 'playing'; sfxPause(); return; }
@@ -120,16 +147,96 @@ function checkGoal() {
          player.y < gy + 28;
 }
 
+// ─── Particles ────────────────────────────────────────────────────────────────
+const particles = [];
+
+function spawnBurst(wx, wy, count, colors, minSpeed, maxSpeed) {
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = minSpeed + Math.random() * (maxSpeed - minSpeed);
+    const life  = 18 + Math.floor(Math.random() * 28);
+    particles.push({
+      x: wx, y: wy,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 1,
+      life, maxLife: life,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      size: 1 + Math.floor(Math.random() * 3),
+    });
+  }
+}
+
+function updateParticles() {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x  += p.vx;
+    p.y  += p.vy;
+    p.vy += 0.2;
+    p.life--;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+}
+
+function drawParticles(camX) {
+  for (const p of particles) {
+    ctx.globalAlpha = p.life / p.maxLife;
+    ctx.fillStyle   = p.color;
+    ctx.fillRect(Math.round(p.x - camX), Math.round(p.y), p.size, p.size);
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ─── Floating texts ───────────────────────────────────────────────────────────
+const floatingTexts = [];
+
+function addFloatingText(wx, wy, text, color) {
+  floatingTexts.push({ x: wx, y: wy, text, color, life: 55, maxLife: 55 });
+}
+
+function updateFloatingTexts() {
+  for (let i = floatingTexts.length - 1; i >= 0; i--) {
+    floatingTexts[i].y   -= 0.9;
+    floatingTexts[i].life--;
+    if (floatingTexts[i].life <= 0) floatingTexts.splice(i, 1);
+  }
+}
+
+function drawFloatingTexts(camX) {
+  ctx.font      = 'bold 11px monospace';
+  ctx.textAlign = 'center';
+  for (const ft of floatingTexts) {
+    ctx.globalAlpha = ft.life / ft.maxLife;
+    ctx.fillStyle   = ft.color;
+    ctx.fillText(ft.text, Math.round(ft.x - camX), Math.round(ft.y));
+  }
+  ctx.globalAlpha = 1;
+  ctx.textAlign   = 'left';
+}
+
+// ─── Screen shake ─────────────────────────────────────────────────────────────
+let shakeMag = 0, shakeDur = 0;
+
+function addShake(mag, dur) {
+  if (mag > shakeMag) { shakeMag = mag; shakeDur = dur; }
+}
+
 // ─── Update ───────────────────────────────────────────────────────────────────
 function update() {
   if (levelComplete || gameState !== 'playing') return;
 
   if (player.hitFlash > 0) player.hitFlash--;
+  if (shakeDur > 0) {
+    shakeDur--;
+    shakeMag *= 0.92;
+  } else {
+    shakeMag = 0;
+  }
 
   // Powerup timers
   if (pw.shield     > 0) { pw.shield--;     if (player.hitFlash === 0) player.hitFlash = 2; }
   if (pw.speed      > 0)   pw.speed--;
   if (pw.doublejump > 0)   pw.doublejump--;
+  if (rtoFrames > 0) rtoFrames--;
 
   // Horizontal input
   const speedMult = pw.speed > 0 ? 1.7 : 1.0;
@@ -199,14 +306,40 @@ function update() {
   if (player.hitFlash === 0) {
     entities.update(
       player,
-      () => { if (player.hitFlash === 0 && pw.shield === 0) loseLife(); },
-      () => { player.vy = JUMP_FORCE * 0.75; sfxStomp(); },
-      (type) => {
+      () => {
+        if (player.hitFlash === 0 && pw.shield === 0) {
+          addShake(8, 18);
+          loseLife();
+        }
+      },
+      (x, y) => {
+        player.vy = JUMP_FORCE * 0.75;
+        spawnBurst(x, y, 16, ['#ff8800', '#ff4400', '#ffaa33'], 1.2, 3.4);
+        addFloatingText(x, y - 8, 'STOMP', '#ffcc66');
+        addShake(5, 12);
+        sfxStomp();
+      },
+      (type, x, y) => {
         if (type === 'life') {
           lives = Math.min(MAX_LIVES + 1, lives + 1);
         } else {
           pw[type] = PW_DURATION[type];
         }
+        const colorsByType = {
+          shield: ['#0088ff', '#88ddff', '#d8f6ff'],
+          speed: ['#ffcc00', '#fff18a', '#ff9900'],
+          doublejump: ['#00ddff', '#aaffff', '#3cf2ff'],
+          life: ['#ff4455', '#ff8899', '#ffd0d6'],
+        };
+        const labelsByType = {
+          shield: 'HA',
+          speed: 'TR',
+          doublejump: 'SN^2',
+          life: '+1',
+        };
+        spawnBurst(x, y, 18, colorsByType[type] || ['#ffffff'], 0.8, 2.8);
+        addFloatingText(x, y - 10, labelsByType[type] || type.toUpperCase(), '#ffffff');
+        addShake(3, 10);
         sfxCollect();
       }
     );
@@ -216,9 +349,24 @@ function update() {
   for (const orb of entities.orbs) {
     if (orb.collected && !orb.usedAsCheckpoint) {
       orb.usedAsCheckpoint = true;
+      checkpointsActivated++;
       checkpoint = { x: orb.x + orb.w / 2 - player.w / 2, y: orb.y - player.h };
+      spawnBurst(orb.x + orb.w / 2, orb.y + orb.h / 2, 14, ['#00ddff', '#aaffff', '#ffffff'], 0.8, 2.6);
+      addFloatingText(orb.x + orb.w / 2, orb.y - 8, 'CHECKPOINT', '#00ddff');
       sfxCollect();
     }
+  }
+
+  updateParticles();
+  updateFloatingTexts();
+
+  if (rtoFrames <= 0) {
+    gameOverCause = 'rto';
+    gameState = 'gameover';
+    addShake(10, 24);
+    saveBestScore();
+    Music.stop();
+    return;
   }
 
   // Goal
@@ -415,6 +563,15 @@ function drawHUD() {
     ctx.fillText(p.label, bx + 83, by + 9);
   });
 
+  const totalSeconds = Math.ceil(rtoFrames / 60);
+  const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+  const seconds = String(totalSeconds % 60).padStart(2, '0');
+  ctx.textAlign = 'right';
+  ctx.font      = 'bold 11px monospace';
+  ctx.fillStyle = rtoFrames <= 30 * 60 ? '#ff6666' : '#ffd700';
+  ctx.fillText(`RTO ${minutes}:${seconds}`, W - 10, 48);
+  ctx.textAlign = 'left';
+
   // Double jump indicator (mid-air)
   if (pw.doublejump > 0 && !player.grounded) {
     ctx.fillStyle = doubleJumpUsed ? '#224444' : '#00ddff';
@@ -437,38 +594,106 @@ function drawHUD() {
   ctx.textAlign = 'left';
 }
 
+function getRunSummary() {
+  const elapsedMs = runStartedAt ? (Date.now() - runStartedAt) : 0;
+  const elapsedSeconds = Math.max(0, Math.round(elapsedMs / 1000));
+  const rtoLeftRatio = Math.max(0, rtoFrames) / RTO_MAX_FRAMES;
+  const orbRatio = entities.totalOrbs ? entities.orbsCollected / entities.totalOrbs : 0;
+  const checkpointRatio = Math.min(1, checkpointsActivated / 4);
+  const deathPenalty = Math.min(0.35, runDeaths * 0.08);
+  const score = Math.max(0, Math.min(1,
+    0.45 * rtoLeftRatio +
+    0.35 * orbRatio +
+    0.20 * checkpointRatio -
+    deathPenalty
+  ));
+
+  let grade = 'C';
+  let status = 'PARTIAL RECOVERY';
+  if (score >= 0.90) { grade = 'S'; status = 'ZERO-DATA-LOSS HERO'; }
+  else if (score >= 0.78) { grade = 'A'; status = 'RECOVERY EXCELLENT'; }
+  else if (score >= 0.64) { grade = 'B'; status = 'RECOVERY STABLE'; }
+  else if (score >= 0.50) { grade = 'C'; status = 'RECOVERY ACCEPTABLE'; }
+  else if (score >= 0.35) { grade = 'D'; status = 'RECOVERY DEGRADED'; }
+  else { grade = 'F'; status = 'RECOVERY FRAGILE'; }
+
+  return {
+    elapsedSeconds,
+    rtoLeftSeconds: Math.max(0, Math.ceil(rtoFrames / 60)),
+    orbRatio,
+    score,
+    grade,
+    status,
+  };
+}
+
 function drawComplete() {
   ctx.fillStyle = 'rgba(0,0,0,0.75)';
   ctx.fillRect(0, 0, W, H);
+
+  const summary = getRunSummary();
+  const elapsedMinutes = String(Math.floor(summary.elapsedSeconds / 60)).padStart(2, '0');
+  const elapsedSeconds = String(summary.elapsedSeconds % 60).padStart(2, '0');
+  const rtoMinutes = String(Math.floor(summary.rtoLeftSeconds / 60)).padStart(2, '0');
+  const rtoSeconds = String(summary.rtoLeftSeconds % 60).padStart(2, '0');
 
   ctx.textAlign = 'center';
 
   ctx.fillStyle = '#ffd700';
   ctx.font = 'bold 36px monospace';
-  ctx.fillText('BACKUP RESTORED', W / 2, H / 2 - 30);
+  ctx.fillText('BACKUP RESTORED', W / 2, H / 2 - 122);
 
   ctx.fillStyle = '#00ff41';
   ctx.font = '16px monospace';
-  ctx.fillText('RTO ACHIEVED — DATACENTER ONLINE', W / 2, H / 2 + 10);
+  ctx.fillText('RTO ACHIEVED — DATACENTER ONLINE', W / 2, H / 2 - 92);
 
   ctx.fillStyle = '#00ddff';
   ctx.font = '13px monospace';
-  ctx.fillText(`Snapshots collected: ${entities.orbsCollected} / ${entities.totalOrbs}`, W / 2, H / 2 + 36);
+  ctx.fillText(`Recovery grade ${summary.grade}  //  ${summary.status}`, W / 2, H / 2 - 66);
+
+  ctx.fillStyle = 'rgba(0,10,0,0.92)';
+  ctx.fillRect(W / 2 - 220, H / 2 - 44, 440, 148);
+  ctx.strokeStyle = '#00ff41';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(W / 2 - 220, H / 2 - 44, 440, 148);
+
+  ctx.fillStyle = '#00ff41';
+  ctx.font = 'bold 12px monospace';
+  ctx.fillText('RECOVERY SUMMARY', W / 2, H / 2 - 18);
+
+  ctx.font = '12px monospace';
+  ctx.fillStyle = '#aaffaa';
+  ctx.fillText(`Run time: ${elapsedMinutes}:${elapsedSeconds}`, W / 2, H / 2 + 10);
+  ctx.fillText(`RTO remaining: ${rtoMinutes}:${rtoSeconds}`, W / 2, H / 2 + 32);
+  ctx.fillText(`Snapshots: ${entities.orbsCollected} / ${entities.totalOrbs}`, W / 2, H / 2 + 54);
+  ctx.fillText(`Deaths: ${runDeaths}   Checkpoints: ${checkpointsActivated}`, W / 2, H / 2 + 76);
 
   // Best score
   const best = loadBestScore();
   if (best) {
-    const tag = best.completed ? '★ COMPLETED' : `BEST: ${best.orbs}/${best.total} SNAPSHOTS`;
+    const tag = best.completed
+      ? `BEST ${best.grade || 'A'}  //  ${best.orbs}/${best.total} SNAPSHOTS`
+      : `BEST: ${best.orbs}/${best.total} SNAPSHOTS`;
     ctx.fillStyle = '#886600';
     ctx.font      = '11px monospace';
-    ctx.fillText(`PERSONAL RECORD — ${tag}`, W / 2, H / 2 + 54);
+    ctx.fillText(`PERSONAL RECORD — ${tag}`, W / 2, H / 2 + 124);
   }
 
   const blink = Math.floor(Date.now() / 500) % 2 === 0;
   if (blink) {
     ctx.fillStyle = '#aaffaa';
     ctx.font      = '12px monospace';
-    ctx.fillText('[ PRESS ANY KEY TO RUN AGAIN ]', W / 2, H / 2 + 76);
+    ctx.fillText('[ ENTER / L: VISIT ANYSTACKARCHITECT.COM ]', W / 2, H / 2 + 150);
+  }
+
+  ctx.fillStyle = '#3a8a3a';
+  ctx.font      = '11px monospace';
+  ctx.fillText('[ ANY OTHER KEY: RUN AGAIN ]', W / 2, H / 2 + 172);
+
+  if (blink) {
+    ctx.fillStyle = '#00ddff';
+    ctx.font      = '10px monospace';
+    ctx.fillText('Learn the real DR strategy behind the run', W / 2, H / 2 + 192);
   }
 
   ctx.textAlign = 'left';
@@ -941,12 +1166,15 @@ function drawGameOver() {
   ctx.shadowColor = '#ff2200';
   ctx.shadowBlur  = 20;
   ctx.fillStyle   = '#ff2200';
-  ctx.fillText('RECOVERY TIME EXCEEDED', cx, cy - 40);
+  ctx.fillText(gameOverCause === 'rto' ? 'RECOVERY TIME EXCEEDED' : 'ALL REPLICAS LOST', cx, cy - 40);
   ctx.shadowBlur  = 0;
 
   ctx.fillStyle = '#882200';
   ctx.font      = '14px monospace';
-  ctx.fillText('RTO BREACH — ALL REPLICAS LOST', cx, cy - 6);
+  ctx.fillText(
+    gameOverCause === 'rto' ? 'RTO BREACH — FAILOVER WINDOW CLOSED' : 'NO LIVES REMAINING — RECOVERY ABORTED',
+    cx, cy - 6
+  );
 
   ctx.fillStyle = '#00ddff';
   ctx.font      = '12px monospace';
@@ -980,8 +1208,21 @@ function loadBestScore() {
 function saveBestScore() {
   try {
     const prev    = loadBestScore();
-    const current = { orbs: entities.orbsCollected, total: entities.totalOrbs, completed: !!levelComplete };
-    if (!prev || current.orbs > prev.orbs || (!prev.completed && current.completed)) {
+    const summary = getRunSummary();
+    const current = {
+      orbs: entities.orbsCollected,
+      total: entities.totalOrbs,
+      completed: !!levelComplete,
+      grade: summary.grade,
+      rtoLeftSeconds: summary.rtoLeftSeconds,
+      deaths: runDeaths,
+    };
+    if (
+      !prev ||
+      current.orbs > prev.orbs ||
+      (!prev.completed && current.completed) ||
+      (current.completed && prev.completed && current.rtoLeftSeconds > (prev.rtoLeftSeconds || 0))
+    ) {
       localStorage.setItem(SCORE_KEY, JSON.stringify(current));
     }
   } catch (_) {}
@@ -1064,9 +1305,18 @@ function loop() {
     update();
     drawBg();
     drawParallax();
+    ctx.save();
+    if (shakeDur > 0 && shakeMag > 0.1) {
+      const sx = (Math.random() * 2 - 1) * shakeMag;
+      const sy = (Math.random() * 2 - 1) * shakeMag;
+      ctx.translate(sx, sy);
+    }
     drawWorld(ctx, cam.x);
     entities.draw(ctx, cam.x);
+    drawParticles(cam.x);
     drawPlayer();
+    drawFloatingTexts(cam.x);
+    ctx.restore();
     drawHUD();
 
     if (levelComplete)                 { gameState = 'complete'; drawComplete(); }

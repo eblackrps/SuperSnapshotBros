@@ -345,7 +345,7 @@ const entities = {
       if (result === 'stomp') {
         player.y = enemy.y - player.h;
         enemy.stomp();
-        onStomp();
+        onStomp(enemy.x + enemy.w / 2, enemy.y);
       } else if (result === 'hit') {
         onHit();
       }
@@ -354,7 +354,7 @@ const entities = {
       pw.update();
       if (pw.overlaps(player)) {
         pw.collected = true;
-        onPowerup(pw.type);
+        onPowerup(pw.type, pw.x + pw.w / 2, pw.y + pw.h / 2);
       }
     }
   },
