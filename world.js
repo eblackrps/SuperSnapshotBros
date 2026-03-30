@@ -108,7 +108,7 @@ function buildWorld11Tiles() {
   // Breakable maintenance bricks for big-form reward routes
   fillBreakableRect(tiles, 109, 113, 11, 11);
   fillBreakableRect(tiles, 148, 151, 9, 9);
-  fillBreakableRect(tiles, 170, 172, 11, 11);
+  fillBreakableRect(tiles, 168, 170, 11, 11);
 
   // Final backup vault shell
   fillRect(tiles, 172, 173, 8, 12);
@@ -200,8 +200,9 @@ const LEVELS = {
       { type: 'grow',       col:  19, row:  9 },  // introduces brick-breaking form
       { type: 'doublejump', col:  41, row:  5 },  // supports the first big climb
       { type: 'shield',     col:  67, row:  1 },  // calm before the midpoint descent
-      { type: 'fire',       col:  90, row:  5 },  // gives the descent a ranged cleanup option
-      { type: 'freeze',     col: 112, row: 10 },  // service-bay crowd control
+      { type: 'fire',       col:  80, row:  3 },  // first ranged attack appears on the descent
+      { type: 'freeze',     col:  90, row:  5 },  // cold shot shows up before the service bay
+      { type: 'freeze',     col: 112, row: 10 },  // service-bay crowd control refresh
       { type: 'speed',      col: 112, row:  8 },  // bonus route lure
       { type: 'life',       col: 131, row:  4 },  // high-risk optional reward
       { type: 'grow',       col: 150, row:  8 },  // lets late-stage players crack brick stacks
