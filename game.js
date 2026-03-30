@@ -164,6 +164,7 @@ const player = {
   hitFlash:    0,
   form:        'small',
   canBreakBricks: false,
+  platformId:  null,
 };
 
 function setPlayerForm(form) {
@@ -199,6 +200,7 @@ function respawn() {
   player.vy   = 0;
   player.grounded = false;
   player.hitFlash = 40;
+  player.platformId = null;
   projectiles.length = 0;
   shotCooldown.freeze = 0;
   shotCooldown.fire = 0;
@@ -421,6 +423,37 @@ function drawProjectiles(camX) {
   }
 }
 
+function moveWithPlatform(entity) {
+  if (entity.platformId == null || !world?.platforms) return;
+  const platform = world.platforms.find(p => p.id === entity.platformId);
+  if (!platform) {
+    entity.platformId = null;
+    return;
+  }
+  entity.x += platform.dx;
+  entity.y += platform.dy;
+}
+
+function resolveMovingPlatforms(entity, prevBottom) {
+  if (!world?.platforms) return;
+  entity.platformId = null;
+  for (const platform of world.platforms) {
+    const overlapX = entity.x + entity.w - 4 > platform.x && entity.x + 4 < platform.x + platform.w;
+    const wasAbove = prevBottom <= platform.prevY + 8;
+    const landed = entity.vy >= 0 &&
+      entity.y + entity.h >= platform.y &&
+      entity.y + entity.h <= platform.y + platform.h + Math.max(8, Math.abs(platform.dy) + 2);
+
+    if (!overlapX || !wasAbove || !landed) continue;
+
+    entity.y = platform.y - entity.h;
+    entity.vy = 0;
+    entity.grounded = true;
+    entity.platformId = platform.id;
+    return;
+  }
+}
+
 // ─── Update ───────────────────────────────────────────────────────────────────
 function update() {
   if (levelComplete || gameState !== 'playing') return;
@@ -440,6 +473,9 @@ function update() {
   if (pw.freeze     > 0)   pw.freeze--;
   if (pw.fire       > 0)   pw.fire--;
   if (rtoFrames > 0) rtoFrames--;
+
+  updatePlatforms();
+  moveWithPlatform(player);
 
   // Horizontal input
   const speedMult = pw.speed > 0 ? 1.7 : 1.0;
@@ -499,6 +535,7 @@ function update() {
     player.vy          = JUMP_FORCE;
     player.jumping     = true;
     player.grounded    = false;
+    player.platformId  = null;
     player.coyoteTimer = 0;
     player.jumpBuffer  = 0;
     sfxJump();
@@ -511,6 +548,7 @@ function update() {
   }
 
   // Move → resolve (X first, then Y)
+  const prevBottom = player.y + player.h;
   player.grounded = false;
 
   player.x += player.vx;
@@ -518,6 +556,7 @@ function update() {
 
   player.y += player.vy;
   resolveY(player);
+  resolveMovingPlatforms(player, prevBottom);
 
   if (player.brokenTiles?.length) {
     for (const tile of player.brokenTiles) {
@@ -1277,6 +1316,7 @@ function drawTitle() {
   drawBg();
   drawParallax();
   drawWorld(ctx, cam.x);
+  drawPlatforms(ctx, cam.x);
   entities.draw(ctx, cam.x);
 
   // VHS glitch (before overlay so it shows through)
@@ -1655,6 +1695,7 @@ function loop() {
       ctx.translate(sx, sy);
     }
     drawWorld(ctx, cam.x);
+    drawPlatforms(ctx, cam.x);
     entities.draw(ctx, cam.x);
     drawProjectiles(cam.x);
     drawParticles(cam.x);

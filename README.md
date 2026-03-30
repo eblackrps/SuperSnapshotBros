@@ -45,6 +45,7 @@ Touch controls are displayed automatically on mobile devices.
 | **TR Powerup** | Turbo Replication — movement speed boost |
 | **SN² Powerup** | Snapshot Chain — mid-air double jump |
 | **FIR Powerup** | Purge Burst — temporary fire projectile |
+| **SYNC Lift** | Replication rails — moving recovery platforms |
 | **+1 Powerup** | Extra Replica — bonus life |
 | **World 1-1** | *Hypervisor Crash* — the inciting incident |
 
@@ -72,6 +73,7 @@ Touch controls are displayed automatically on mobile devices.
 - **Run-up jumps** — hold `Shift` to build speed and clear longer gaps
 - **Big form** — `UP` powerup makes you larger and lets you smash breakable bricks
 - **Alt-fired powers** — `Left Alt` shoots ice and `Right Alt` shoots fire when those powerups are active
+- **Sync lifts** — moving platforms now preview the traversal style for later World 1 levels
 - **Enemy stomp** — land on Rogue Packets to squash them; chain stomps for a bounce
 - **Squash & stretch** — enemies flatten with physics-accurate deformation on stomp
 - **Parallax background** — two-layer server rack scenery with animated LEDs

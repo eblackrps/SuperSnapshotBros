@@ -118,6 +118,36 @@ function buildWorld11Tiles() {
   return tiles;
 }
 
+function positionPlatform(platform) {
+  const travelPx = (platform.travelTiles || 0) * TILE_SIZE;
+  const offset   = Math.sin(platform.t * Math.PI * 2) * travelPx;
+  platform.x = platform.baseX + (platform.axis === 'x' ? offset : 0);
+  platform.y = platform.baseY + (platform.axis === 'y' ? offset : 0);
+}
+
+function createPlatformState(def, index) {
+  const platform = {
+    ...def,
+    id: index,
+    axis: def.axis === 'y' ? 'y' : 'x',
+    w: (def.wTiles || 2) * TILE_SIZE,
+    h: def.h || 12,
+    baseX: def.col * TILE_SIZE,
+    baseY: def.row * TILE_SIZE,
+    t: ((def.phase || 0) % 1 + 1) % 1,
+    x: 0,
+    y: 0,
+    prevX: 0,
+    prevY: 0,
+    dx: 0,
+    dy: 0,
+  };
+  positionPlatform(platform);
+  platform.prevX = platform.x;
+  platform.prevY = platform.y;
+  return platform;
+}
+
 const LEVELS = {
   '1-1': {
     name: 'World 1-1 — Hypervisor Crash',
@@ -195,6 +225,10 @@ const LEVELS = {
       { type: 'rogue-packet', col: 160, row:  4, patrolLeft: 156, patrolRight: 163 },
       { type: 'crypto-process', col: 171, row:  9, patrolLeft: 167, patrolRight: 178, amplitude: 10 },
     ],
+    platforms: [
+      { col: 131, row: 11, wTiles: 2, axis: 'y', travelTiles: 2, periodFrames: 220, phase: 0.72 },
+      { col: 152, row: 8,  wTiles: 2, axis: 'x', travelTiles: 3, periodFrames: 200, phase: 0.18 },
+    ],
     tileBuilder: buildWorld11Tiles,
   }
 };
@@ -212,11 +246,24 @@ function loadLevel(id) {
     orbs: (base.orbs || []).map(o => ({ ...o })),
     powerups: (base.powerups || []).map(p => ({ ...p })),
     enemies: (base.enemies || []).map(e => ({ ...e })),
+    platforms: (base.platforms || []).map((p, index) => createPlatformState({ ...p }, index)),
     sections: (base.sections || []).map(s => ({ ...s })),
     landmarks: (base.landmarks || []).map(l => ({ ...l })),
     tiles: base.tileBuilder ? base.tileBuilder() : (base.tiles || []).map(row => row.slice()),
   };
   return world;
+}
+
+function updatePlatforms() {
+  if (!world?.platforms) return;
+  for (const platform of world.platforms) {
+    platform.prevX = platform.x;
+    platform.prevY = platform.y;
+    platform.t = (platform.t + 1 / Math.max(60, platform.periodFrames || 180)) % 1;
+    positionPlatform(platform);
+    platform.dx = platform.x - platform.prevX;
+    platform.dy = platform.y - platform.prevY;
+  }
 }
 
 // ─── Tile queries ─────────────────────────────────────────────────────────────
@@ -363,4 +410,41 @@ function drawWorld(ctx, camX) {
   ctx.font = 'bold 7px monospace';
   ctx.fillText('BCK', gx + 1, gy + 11);
   ctx.fillText('UP', gx + 3, gy + 20);
+}
+
+function drawPlatforms(ctx, camX) {
+  if (!world?.platforms) return;
+
+  for (const platform of world.platforms) {
+    const sx = Math.round(platform.x - camX);
+    const sy = Math.round(platform.y);
+
+    ctx.fillStyle = 'rgba(0, 255, 200, 0.08)';
+    if (platform.axis === 'x') {
+      const minX = platform.baseX - platform.travelTiles * TILE_SIZE - camX;
+      const maxX = platform.baseX + platform.travelTiles * TILE_SIZE - camX + platform.w;
+      ctx.fillRect(Math.round(minX), sy + 4, Math.round(maxX - minX), 4);
+    } else {
+      const minY = platform.baseY - platform.travelTiles * TILE_SIZE;
+      const maxY = platform.baseY + platform.travelTiles * TILE_SIZE + platform.h;
+      ctx.fillRect(sx + Math.round(platform.w / 2) - 2, Math.round(minY), 4, Math.round(maxY - minY));
+    }
+
+    ctx.fillStyle = '#15463a';
+    ctx.fillRect(sx, sy, platform.w, platform.h);
+    ctx.fillStyle = '#2be8c1';
+    ctx.fillRect(sx, sy, platform.w, 3);
+    ctx.fillStyle = '#0d221c';
+    ctx.fillRect(sx + 4, sy + 5, platform.w - 8, 3);
+    ctx.fillRect(sx + 4, sy + 10, platform.w - 8, 1);
+    ctx.fillStyle = '#9affea';
+    ctx.fillRect(sx + 6, sy + 4, 3, 3);
+    ctx.fillRect(sx + platform.w - 9, sy + 4, 3, 3);
+
+    ctx.fillStyle = '#062018';
+    ctx.font = 'bold 6px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('SYNC', sx + Math.round(platform.w / 2), sy + 9);
+    ctx.textAlign = 'left';
+  }
 }
