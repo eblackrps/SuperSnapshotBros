@@ -49,6 +49,7 @@ Touch controls are displayed automatically on mobile devices.
 | **EMP Field** | Control-plane interference — temporarily disrupts jump and shots |
 | **+1 Powerup** | Extra Replica — bonus life |
 | **World 1-1** | *Hypervisor Crash* — the inciting incident |
+| **World 1-2** | *Replication Lag* — sync lifts and EMP pressure |
 
 ---
 
@@ -120,7 +121,7 @@ Six ascending platforms form the recovery path. The gap in the ground forces you
 - **Vanilla JS** — no framework, no bundler
 - **HTML5 Canvas 2D** — all rendering via `ctx` draw calls
 - **Web Audio API** — all sound synthesised procedurally at runtime
-- **localStorage** — best score persisted per level
+- **localStorage** — best World 1 run persisted locally
 
 ---
 
@@ -129,10 +130,9 @@ Six ascending platforms form the recovery path. The gap in the ground forces you
 See [`BUILD_PLAN.md`](BUILD_PLAN.md) for the full phase breakdown.
 
 Planned additions:
-- World 1-2 through 1-6 (Ransomware, Storage Failure, Datacenter Flood, Cloud Outage, Recovery Point)
+- World 1-3 through 1-6 (Immutable Backup, Storage Failure, Datacenter Flood, Cloud Outage, Recovery Point)
 - World select map (network topology style)
 - Crypto Process enemy (sine-wave float pattern)
-- EMP Pulse Zone hazard (disables jump temporarily)
 - Rising Log Data mechanic (rising floor)
 - Web-font pixel art title logo
 

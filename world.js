@@ -3,6 +3,7 @@
 const TILE_SIZE = 32;
 const LEVEL_ROWS = 14;
 const WORLD_1_1_COLS = 188;
+const WORLD_1_2_COLS = 196;
 
 // ─── Level Data ───────────────────────────────────────────────────────────────
 // 0 = empty, 1 = solid
@@ -114,6 +115,65 @@ function buildWorld11Tiles() {
   fillRect(tiles, 172, 173, 8, 12);
   fillRect(tiles, 187, 187, 8, 12);
   fillRow(tiles, 8, 173, 186);
+
+  return tiles;
+}
+
+function buildWorld12Tiles() {
+  const tiles = createTileGrid(WORLD_1_2_COLS, LEVEL_ROWS);
+
+  // Ground backbone
+  fillRow(tiles, 13, 0, WORLD_1_2_COLS - 1);
+
+  // Replication lag ruptures across the floor
+  const groundGaps = [
+    [8, 10],
+    [23, 25],
+    [39, 41],
+    [58, 60],
+    [74, 76],
+    [94, 97],
+    [120, 123],
+    [142, 145],
+    [167, 169],
+    [184, 186],
+  ];
+  for (const [start, end] of groundGaps) clearRect(tiles, start, end, 13, 13);
+
+  // Early relay staircase
+  fillRow(tiles, 10, 14, 21);
+  fillRow(tiles, 8, 27, 34);
+  fillRow(tiles, 6, 43, 50);
+
+  // Jitter shelves
+  fillRow(tiles, 9, 54, 62);
+  fillRow(tiles, 7, 66, 73);
+  fillRow(tiles, 5, 78, 85);
+
+  // Mid-lag basin
+  fillRow(tiles, 10, 100, 107);
+  fillRow(tiles, 8, 111, 118);
+  fillRow(tiles, 6, 124, 131);
+
+  // Commit spine to the final uplink
+  fillRow(tiles, 10, 136, 143);
+  fillRow(tiles, 8, 148, 155);
+  fillRow(tiles, 6, 160, 167);
+  fillRow(tiles, 4, 172, 179);
+  fillRow(tiles, 3, 184, 191);
+
+  // Relay towers and uplink shell
+  fillRect(tiles, 54, 55, 10, 12);
+  fillRect(tiles, 61, 62, 10, 12);
+  fillRect(tiles, 184, 186, 4, 12);
+  fillRect(tiles, 191, 193, 4, 12);
+
+  // Breakable cache blocks
+  fillBreakableRect(tiles, 113, 116, 9, 9);
+  fillBreakableRect(tiles, 162, 164, 7, 7);
+
+  // Small uplink roof
+  fillRow(tiles, 4, 186, 193);
 
   return tiles;
 }
@@ -246,6 +306,90 @@ const LEVELS = {
       { type: 'emp', col: 155, row: 9, wTiles: 2, hTiles: 3 },
     ],
     tileBuilder: buildWorld11Tiles,
+  },
+  '1-2': {
+    name: 'World 1-2 — Replication Lag',
+    cols: WORLD_1_2_COLS,
+    rows: LEVEL_ROWS,
+    rtoSeconds: 390,
+    playerStart: { x: 48, y: 384 },
+    goal: { col: 189, row: 2 },
+    sections: [
+      { startCol:   0, endCol:  35, label: 'Warm Cache' },
+      { startCol:  36, endCol:  73, label: 'Jitter Steps' },
+      { startCol:  74, endCol: 118, label: 'Lag Channel' },
+      { startCol: 119, endCol: 155, label: 'Mirror Shelf' },
+      { startCol: 156, endCol: 195, label: 'Commit Spine' },
+    ],
+    landmarks: [
+      { col: 49,  color: '#00ff41' },
+      { col: 89,  color: '#ffaa00' },
+      { col: 124, color: '#00ddff' },
+      { col: 170, color: '#ff8844' },
+      { col: 189, color: '#ffd700' },
+    ],
+    orbs: [
+      { col:  5, row: 12 },
+      { col: 12, row: 12, checkpoint: true },
+      { col: 20, row:  9 },
+      { col: 31, row:  7 },
+      { col: 47, row:  5, checkpoint: true },
+      { col: 59, row:  8 },
+      { col: 71, row:  6 },
+      { col: 83, row:  4, checkpoint: true },
+      { col: 98, row: 12 },
+      { col: 112, row:  7 },
+      { col: 125, row:  5, checkpoint: true },
+      { col: 138, row:  9 },
+      { col: 151, row:  7 },
+      { col: 164, row:  5, checkpoint: true },
+      { col: 177, row:  3 },
+      { col: 189, row:  2 },
+    ],
+    powerups: [
+      { type: 'speed',      col:   8, row: 12 },
+      { type: 'grow',       col:  18, row:  9 },
+      { type: 'doublejump', col:  43, row:  5 },
+      { type: 'fire',       col:  59, row:  8 },
+      { type: 'freeze',     col:  75, row:  5 },
+      { type: 'shield',     col:  89, row:  7 },
+      { type: 'speed',      col: 105, row: 10 },
+      { type: 'life',       col: 116, row:  8 },
+      { type: 'grow',       col: 127, row:  5 },
+      { type: 'doublejump', col: 138, row:  9 },
+      { type: 'freeze',     col: 154, row:  7 },
+      { type: 'fire',       col: 165, row:  5 },
+      { type: 'shield',     col: 181, row:  3 },
+    ],
+    enemies: [
+      { type: 'rogue-packet', col:  16, row: 10, patrolLeft: 14, patrolRight: 21 },
+      { type: 'rogue-packet', col:  29, row:  8, patrolLeft: 27, patrolRight: 34 },
+      { type: 'rogue-packet', col:  45, row:  6, patrolLeft: 43, patrolRight: 50 },
+      { type: 'crypto-process', col:  58, row:  8, patrolLeft: 54, patrolRight: 62, amplitude: 10 },
+      { type: 'rogue-packet', col:  69, row:  7, patrolLeft: 66, patrolRight: 73 },
+      { type: 'crypto-process', col:  82, row:  4, patrolLeft: 78, patrolRight: 85, amplitude: 12 },
+      { type: 'rogue-packet', col: 102, row: 10, patrolLeft: 100, patrolRight: 107 },
+      { type: 'rogue-packet', col: 114, row:  8, patrolLeft: 111, patrolRight: 118 },
+      { type: 'crypto-process', col: 126, row:  6, patrolLeft: 124, patrolRight: 131, amplitude: 11 },
+      { type: 'rogue-packet', col: 139, row: 10, patrolLeft: 136, patrolRight: 143 },
+      { type: 'rogue-packet', col: 151, row:  8, patrolLeft: 148, patrolRight: 155 },
+      { type: 'crypto-process', col: 163, row:  6, patrolLeft: 160, patrolRight: 167, amplitude: 10 },
+      { type: 'rogue-packet', col: 176, row:  4, patrolLeft: 172, patrolRight: 179 },
+    ],
+    platforms: [
+      { col: 88,  row: 11, wTiles: 2, axis: 'y', travelTiles: 3, periodFrames: 220, phase: 0.68 },
+      { col: 104, row: 7,  wTiles: 2, axis: 'x', travelTiles: 4, periodFrames: 210, phase: 0.16 },
+      { col: 132, row: 10, wTiles: 2, axis: 'y', travelTiles: 2, periodFrames: 190, phase: 0.38 },
+      { col: 154, row: 5,  wTiles: 2, axis: 'x', travelTiles: 3, periodFrames: 180, phase: 0.52 },
+      { col: 180, row: 6,  wTiles: 2, axis: 'y', travelTiles: 2, periodFrames: 170, phase: 0.82 },
+    ],
+    hazards: [
+      { type: 'emp', col: 68,  row: 11, wTiles: 3, hTiles: 2 },
+      { type: 'emp', col: 92,  row: 10, wTiles: 4, hTiles: 3 },
+      { type: 'emp', col: 118, row:  9, wTiles: 3, hTiles: 2 },
+      { type: 'emp', col: 166, row:  8, wTiles: 2, hTiles: 3 },
+    ],
+    tileBuilder: buildWorld12Tiles,
   }
 };
 

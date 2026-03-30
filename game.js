@@ -55,9 +55,61 @@ let rtoMaxFrames = DEFAULT_RTO_FRAMES;
 let rtoFrames = rtoMaxFrames;
 let gameOverCause = 'lives';
 const SITE_URL = 'https://anystackarchitect.com';
+const LEVEL_SEQUENCE = ['1-1', '1-2'];
+let currentLevelIndex = 0;
+let currentLevelId = LEVEL_SEQUENCE[0];
 let runDeaths = 0;
 let checkpointsActivated = 0;
 let runStartedAt = 0;
+let bankedOrbsCollected = 0;
+let bankedOrbsTotal = 0;
+let bankedCheckpointOrbs = 0;
+let levelBannerFrames = 0;
+
+function resetTransientState() {
+  pw.shield = pw.speed = pw.doublejump = pw.freeze = pw.fire = 0;
+  doubleJumpUsed = false;
+  empFrames = 0;
+  projectiles.length = 0;
+  shotCooldown.freeze = 0;
+  shotCooldown.fire = 0;
+  attackLatch.freeze = false;
+  attackLatch.fire = false;
+}
+
+function loadRunLevel(levelId, { resetCheckpoint = true, preserveForm = false } = {}) {
+  currentLevelId = levelId;
+  levelComplete = false;
+  if (resetCheckpoint) checkpoint = null;
+  resetTransientState();
+  loadLevel(levelId);
+  rtoMaxFrames  = getLevelRtoFrames(world);
+  rtoFrames     = rtoMaxFrames;
+  entities.init(world);
+  respawn(preserveForm);
+  transitionFlash = 18;
+  levelBannerFrames = 120;
+}
+
+function restartCurrentLevel() {
+  loadRunLevel(currentLevelId, { resetCheckpoint: true, preserveForm: false });
+}
+
+function advanceToNextLevel() {
+  bankedOrbsCollected += entities.orbsCollected;
+  bankedOrbsTotal += entities.totalOrbs;
+  bankedCheckpointOrbs += entities.orbs.filter(orb => orb.checkpoint).length;
+  currentLevelIndex++;
+
+  if (currentLevelIndex >= LEVEL_SEQUENCE.length) {
+    levelComplete = true;
+    saveBestScore();
+    Music.stop();
+    return;
+  }
+
+  loadRunLevel(LEVEL_SEQUENCE[currentLevelIndex], { resetCheckpoint: true, preserveForm: true });
+}
 
 function getLevelRtoFrames(level) {
   const seconds = Math.max(120, level?.rtoSeconds || 300);
@@ -70,27 +122,20 @@ function startGame() {
   transitionFlash = 18;
   lives           = MAX_LIVES;
   checkpoint      = null;
-  pw.shield = pw.speed = pw.doublejump = pw.freeze = pw.fire = 0;
-  doubleJumpUsed  = false;
-  empFrames       = 0;
   gameOverCause   = 'lives';
   particles.length = 0;
   floatingTexts.length = 0;
-  projectiles.length = 0;
-  shotCooldown.freeze = 0;
-  shotCooldown.fire = 0;
-  attackLatch.freeze = false;
-  attackLatch.fire = false;
   shakeMag = 0;
   shakeDur = 0;
+  currentLevelIndex = 0;
+  currentLevelId = LEVEL_SEQUENCE[0];
   runDeaths = 0;
   checkpointsActivated = 0;
   runStartedAt = Date.now();
-  loadLevel('1-1');
-  rtoMaxFrames    = getLevelRtoFrames(world);
-  rtoFrames       = rtoMaxFrames;
-  entities.init(world);
-  respawn();
+  bankedOrbsCollected = 0;
+  bankedOrbsTotal = 0;
+  bankedCheckpointOrbs = 0;
+  loadRunLevel(currentLevelId, { resetCheckpoint: true, preserveForm: false });
   Music.start();
 }
 
@@ -125,7 +170,7 @@ document.addEventListener('keydown', e => {
   if (gameState === 'gameover') { startGame(); return; }
   if (gameState === 'playing'  && e.code === 'Escape') { gameState = 'paused';  sfxPause(); return; }
   if (gameState === 'paused'   && e.code === 'Escape') { gameState = 'playing'; sfxPause(); return; }
-  if (gameState === 'paused'   && e.code === 'KeyR')   { startGame(); return; }
+  if (gameState === 'paused'   && e.code === 'KeyR')   { restartCurrentLevel(); return; }
   if (e.code === 'KeyM') { const m = toggleMute(); Music.setVolume(m ? 0 : 0.32); }
 });
 document.addEventListener('keyup', e => { keys[e.code] = false; });
@@ -194,9 +239,9 @@ function shrinkPlayer() {
   return true;
 }
 
-function respawn() {
+function respawn(preserveForm = false) {
   const s     = checkpoint || world.playerStart;
-  setPlayerForm('small');
+  if (!preserveForm) setPlayerForm('small');
   player.x    = s.x;
   player.y    = s.y;
   player.vx   = 0;
@@ -695,7 +740,17 @@ function update() {
   }
 
   // Goal
-  if (checkGoal()) { levelComplete = true; sfxGoal(); saveBestScore(); Music.stop(); }
+  if (checkGoal()) {
+    sfxGoal();
+    if (currentLevelIndex < LEVEL_SEQUENCE.length - 1) {
+      advanceToNextLevel();
+    } else {
+      currentLevelIndex = LEVEL_SEQUENCE.length;
+      levelComplete = true;
+      saveBestScore();
+      Music.stop();
+    }
+  }
 }
 
 // ─── Parallax background ─────────────────────────────────────────────────────
@@ -1003,8 +1058,10 @@ function getRunSummary() {
   const elapsedMs = runStartedAt ? (Date.now() - runStartedAt) : 0;
   const elapsedSeconds = Math.max(0, Math.round(elapsedMs / 1000));
   const rtoLeftRatio = Math.max(0, rtoFrames) / rtoMaxFrames;
-  const orbRatio = entities.totalOrbs ? entities.orbsCollected / entities.totalOrbs : 0;
-  const totalCheckpointOrbs = Math.max(1, entities.orbs.filter(orb => orb.checkpoint).length);
+  const totalCollected = bankedOrbsCollected + entities.orbsCollected;
+  const totalOrbs = bankedOrbsTotal + entities.totalOrbs;
+  const orbRatio = totalOrbs ? totalCollected / totalOrbs : 0;
+  const totalCheckpointOrbs = Math.max(1, bankedCheckpointOrbs + entities.orbs.filter(orb => orb.checkpoint).length);
   const checkpointRatio = Math.min(1, checkpointsActivated / totalCheckpointOrbs);
   const deathPenalty = Math.min(0.35, runDeaths * 0.08);
   const score = Math.max(0, Math.min(1,
@@ -1026,6 +1083,8 @@ function getRunSummary() {
   return {
     elapsedSeconds,
     rtoLeftSeconds: Math.max(0, Math.ceil(rtoFrames / 60)),
+    totalCollected,
+    totalOrbs,
     orbRatio,
     score,
     grade,
@@ -1071,7 +1130,7 @@ function drawComplete() {
   ctx.fillStyle = '#aaffaa';
   ctx.fillText(`Run time: ${elapsedMinutes}:${elapsedSeconds}`, W / 2, H / 2 + 10);
   ctx.fillText(`RTO remaining: ${rtoMinutes}:${rtoSeconds}`, W / 2, H / 2 + 32);
-  ctx.fillText(`Snapshots: ${entities.orbsCollected} / ${entities.totalOrbs}`, W / 2, H / 2 + 54);
+  ctx.fillText(`Snapshots: ${summary.totalCollected} / ${summary.totalOrbs}`, W / 2, H / 2 + 54);
   ctx.fillText(`Deaths: ${runDeaths}   Checkpoints: ${checkpointsActivated}`, W / 2, H / 2 + 76);
 
   // Best score
@@ -1102,6 +1161,24 @@ function drawComplete() {
     ctx.fillText('Learn the real DR strategy behind the run', W / 2, H / 2 + 192);
   }
 
+  ctx.textAlign = 'left';
+}
+
+function drawLevelBanner() {
+  if (levelBannerFrames <= 0 || gameState !== 'playing') return;
+  const alpha = Math.min(1, levelBannerFrames / 20);
+  ctx.fillStyle = `rgba(0, 10, 0, ${0.55 * alpha})`;
+  ctx.fillRect(W / 2 - 190, 56, 380, 52);
+  ctx.strokeStyle = `rgba(0, 255, 160, ${0.8 * alpha})`;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(W / 2 - 190, 56, 380, 52);
+  ctx.textAlign = 'center';
+  ctx.fillStyle = `rgba(0, 255, 160, ${alpha})`;
+  ctx.font = 'bold 18px monospace';
+  ctx.fillText(world.name, W / 2, 78);
+  ctx.fillStyle = `rgba(180, 255, 220, ${alpha})`;
+  ctx.font = '10px monospace';
+  ctx.fillText('RECOVERY STAGE LOADED', W / 2, 95);
   ctx.textAlign = 'left';
 }
 
@@ -1589,7 +1666,8 @@ function drawGameOver() {
 
   ctx.fillStyle = '#00ddff';
   ctx.font      = '12px monospace';
-  ctx.fillText(`Snapshots recovered: ${entities.orbsCollected} / ${entities.totalOrbs}`, cx, cy + 22);
+  const summary = getRunSummary();
+  ctx.fillText(`Snapshots recovered: ${summary.totalCollected} / ${summary.totalOrbs}`, cx, cy + 22);
 
   const blink = Math.floor(Date.now() / 520) % 2 === 0;
   ctx.fillStyle = blink ? '#aaffaa' : '#1a4a1a';
@@ -1610,7 +1688,7 @@ function drawBg() {
 }
 
 // ─── Best score (localStorage) ───────────────────────────────────────────────
-const SCORE_KEY = 'ssb-best-1-1';
+const SCORE_KEY = 'ssb-best-world1';
 
 function loadBestScore() {
   try { return JSON.parse(localStorage.getItem(SCORE_KEY)); } catch { return null; }
@@ -1621,8 +1699,8 @@ function saveBestScore() {
     const prev    = loadBestScore();
     const summary = getRunSummary();
     const current = {
-      orbs: entities.orbsCollected,
-      total: entities.totalOrbs,
+      orbs: summary.totalCollected,
+      total: summary.totalOrbs,
       completed: !!levelComplete,
       grade: summary.grade,
       rtoLeftSeconds: summary.rtoLeftSeconds,
@@ -1747,6 +1825,10 @@ function loop() {
     drawFloatingTexts(cam.x);
     ctx.restore();
     drawHUD();
+    if (levelBannerFrames > 0) {
+      drawLevelBanner();
+      levelBannerFrames--;
+    }
 
     if (levelComplete)                 { gameState = 'complete'; drawComplete(); }
     else if (gameState === 'paused')   drawPause();
@@ -1778,6 +1860,6 @@ function loop() {
 }
 
 // ─── Boot ─────────────────────────────────────────────────────────────────────
-loadLevel('1-1');
+loadLevel(currentLevelId);
 entities.init(world);
 loop();
