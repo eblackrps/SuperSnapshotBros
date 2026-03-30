@@ -7,11 +7,15 @@ const W = canvas.width;   // 800
 const H = canvas.height;  // 450
 
 // ─── Physics constants ────────────────────────────────────────────────────────
-const GRAVITY       = 0.5;
-const MAX_FALL      = 12;
-const JUMP_FORCE    = -11;
-const MOVE_SPEED    = 0.8;
-const FRICTION      = 0.85;
+const GRAVITY       = 0.43;
+const MAX_FALL      = 11.5;
+const JUMP_FORCE    = -12.4;
+const MOVE_SPEED    = 0.78;
+const RUN_SPEED     = 1.08;
+const WALK_MAX_VX   = 5.2;
+const RUN_MAX_VX    = 7.4;
+const FRICTION      = 0.86;
+const RUN_FRICTION  = 0.92;
 const COYOTE_FRAMES = 6;
 const BUFFER_FRAMES = 8;
 
@@ -114,6 +118,10 @@ function updateCamera(target) {
   const levelW = world.cols * TILE_SIZE;
   const ideal  = target.x + target.w / 2 - W / 2;
   cam.x        = Math.max(0, Math.min(ideal, levelW - W));
+}
+
+function isRunHeld() {
+  return !!(keys['ShiftLeft'] || keys['ShiftRight'] || touchState.run);
 }
 
 function getCurrentSectionName() {
@@ -258,9 +266,15 @@ function update() {
   const speedMult = pw.speed > 0 ? 1.7 : 1.0;
   const goLeft  = keys['ArrowLeft']  || keys['KeyA'];
   const goRight = keys['ArrowRight'] || keys['KeyD'];
-  if (goLeft)  { player.vx -= MOVE_SPEED * speedMult; player.facing = -1; }
-  if (goRight) { player.vx += MOVE_SPEED * speedMult; player.facing =  1; }
-  player.vx *= FRICTION;
+  const runHeld = isRunHeld();
+  const accel = (runHeld ? RUN_SPEED : MOVE_SPEED) * speedMult;
+  const maxVx = (runHeld ? RUN_MAX_VX : WALK_MAX_VX) * speedMult;
+  const friction = (!goLeft && !goRight) ? (runHeld ? RUN_FRICTION : FRICTION) : 1;
+  if (goLeft)  { player.vx -= accel; player.facing = -1; }
+  if (goRight) { player.vx += accel; player.facing =  1; }
+  player.vx *= friction;
+  if (player.vx > maxVx) player.vx = maxVx;
+  if (player.vx < -maxVx) player.vx = -maxVx;
 
   // Walk animation tick
   if ((goLeft || goRight) && player.grounded) player.walkTick++;
@@ -269,7 +283,8 @@ function update() {
   // Gravity
   const falling  = player.vy > 0;
   const cutJump  = !player.jumping && player.vy < 0;
-  player.vy     += GRAVITY * ((falling || cutJump) ? 2.0 : 1.0);
+  const gravityMult = falling ? 1.7 : cutJump ? 2.05 : 1.0;
+  player.vy     += GRAVITY * gravityMult;
   if (player.vy > MAX_FALL) player.vy = MAX_FALL;
 
   // Jump tracking
@@ -651,7 +666,7 @@ function drawHUD() {
   );
   ctx.fillStyle = '#2a3a2a';
   ctx.textAlign = 'right';
-  ctx.fillText('WASD / Arrows + Space', W - 8, H - 6);
+  ctx.fillText('Shift / Run + Jump for long arcs', W - 8, H - 6);
   ctx.textAlign = 'left';
 }
 
@@ -1206,11 +1221,12 @@ function drawPause() {
   ctx.font      = '12px monospace';
   ctx.fillText('ESC  —  RESUME', cx, cy - 10);
   ctx.fillText('R    —  RESTART LEVEL', cx, cy + 14);
+  ctx.fillText('SHIFT —  RUN / LONG JUMP', cx, cy + 38);
 
   ctx.fillStyle = '#1a5a1a';
   ctx.font      = '10px monospace';
-  ctx.fillText(`LIVES: ${lives} / ${MAX_LIVES}   SNAPSHOTS: ${entities.orbsCollected} / ${entities.totalOrbs}`, cx, cy + 50);
-  ctx.fillText(world.name, cx, cy + 66);
+  ctx.fillText(`LIVES: ${lives} / ${MAX_LIVES}   SNAPSHOTS: ${entities.orbsCollected} / ${entities.totalOrbs}`, cx, cy + 74);
+  ctx.fillText(world.name, cx, cy + 90);
 
   ctx.textAlign = 'left';
   drawScanlines();
@@ -1294,9 +1310,10 @@ function saveBestScore() {
 const touchBtns = {
   left:  { x: 50,     y: H - 75, r: 36 },
   right: { x: 138,    y: H - 75, r: 36 },
+  run:   { x: W - 158, y: H - 75, r: 34 },
   jump:  { x: W - 70, y: H - 75, r: 44 },
 };
-const touchState = { left: false, right: false, jump: false };
+const touchState = { left: false, right: false, run: false, jump: false };
 
 function touchInBtn(tx, ty, btn) {
   const dx = tx - btn.x, dy = ty - btn.y;
@@ -1306,12 +1323,14 @@ function touchInBtn(tx, ty, btn) {
 function syncTouchToKeys() {
   keys['ArrowLeft']  = touchState.left;
   keys['ArrowRight'] = touchState.right;
+  keys['ShiftLeft']  = touchState.run;
   keys['Space']      = touchState.jump;
 }
 
 function evalTouches(e) {
   touchState.left  = false;
   touchState.right = false;
+  touchState.run   = false;
   touchState.jump  = false;
   const rect = canvas.getBoundingClientRect();
   const scaleX = W / rect.width;
@@ -1321,6 +1340,7 @@ function evalTouches(e) {
     const ty = (t.clientY - rect.top)  * scaleY;
     if (touchInBtn(tx, ty, touchBtns.left))  touchState.left  = true;
     if (touchInBtn(tx, ty, touchBtns.right)) touchState.right = true;
+    if (touchInBtn(tx, ty, touchBtns.run))   touchState.run   = true;
     if (touchInBtn(tx, ty, touchBtns.jump))  touchState.jump  = true;
   }
   syncTouchToKeys();
@@ -1338,6 +1358,7 @@ function drawTouchControls() {
   const btns = [
     { ...touchBtns.left,  label: '◀', active: touchState.left  },
     { ...touchBtns.right, label: '▶', active: touchState.right },
+    { ...touchBtns.run,   label: 'RUN', active: touchState.run },
     { ...touchBtns.jump,  label: '▲', active: touchState.jump  },
   ];
   for (const b of btns) {
@@ -1351,7 +1372,7 @@ function drawTouchControls() {
     ctx.stroke();
     ctx.globalAlpha = b.active ? 1 : 0.6;
     ctx.fillStyle   = '#ffffff';
-    ctx.font        = `bold ${b.r - 10}px monospace`;
+    ctx.font        = b.label === 'RUN' ? 'bold 12px monospace' : `bold ${b.r - 10}px monospace`;
     ctx.textAlign   = 'center';
     ctx.fillText(b.label, b.x, b.y + (b.r - 10) * 0.35);
   }

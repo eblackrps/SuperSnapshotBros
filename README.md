@@ -20,6 +20,7 @@ Open `index.html` in any modern browser. No server required.
 |-----|--------|
 | `A` / `←` | Move left |
 | `D` / `→` | Move right |
+| `Shift` | Run / build longer jump momentum |
 | `W` / `↑` / `Space` | Jump |
 | `Esc` | Pause / Resume |
 | `R` (paused) | Restart level |
@@ -62,6 +63,7 @@ Touch controls are displayed automatically on mobile devices.
 - **Coyote time** — 6-frame jump grace window after walking off a platform
 - **Jump buffering** — 8-frame early jump input registration
 - **Variable jump height** — tap for a short hop, hold for full height
+- **Run-up jumps** — hold `Shift` to build speed and clear longer gaps
 - **Enemy stomp** — land on Rogue Packets to squash them; chain stomps for a bounce
 - **Squash & stretch** — enemies flatten with physics-accurate deformation on stomp
 - **Parallax background** — two-layer server rack scenery with animated LEDs
