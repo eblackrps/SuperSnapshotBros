@@ -12,6 +12,8 @@ Every mechanic is a **disaster recovery metaphor**. You are a sysadmin hero navi
 
 Open `index.html` in any modern browser. No server required.
 
+GitHub Pages: [https://eblackrps.github.io/SuperSnapshotBros/](https://eblackrps.github.io/SuperSnapshotBros/)
+
 ---
 
 ## Controls
