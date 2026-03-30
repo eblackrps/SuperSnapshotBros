@@ -10,14 +10,16 @@ const H = canvas.height;  // 450
 const GRAVITY       = 0.43;
 const MAX_FALL      = 11.5;
 const JUMP_FORCE    = -12.4;
-const MOVE_SPEED    = 0.78;
-const RUN_SPEED     = 1.08;
-const WALK_MAX_VX   = 5.2;
-const RUN_MAX_VX    = 7.4;
+const MOVE_SPEED    = 0.72;
+const RUN_SPEED     = 0.92;
+const WALK_MAX_VX   = 4.8;
+const RUN_MAX_VX    = 6.3;
 const FRICTION      = 0.86;
 const RUN_FRICTION  = 0.92;
 const COYOTE_FRAMES = 6;
 const BUFFER_FRAMES = 8;
+const PLAYER_SMALL  = { w: 22, h: 30 };
+const PLAYER_BIG    = { w: 26, h: 44 };
 
 // ─── Game state ───────────────────────────────────────────────────────────────
 // 'title' | 'playing' | 'paused' | 'gameover' | 'complete'
@@ -31,10 +33,10 @@ const MAX_LIVES     = 3;
 let checkpoint = null;
 
 // Powerup timers (in frames) and double-jump flag
-const pw = { shield: 0, speed: 0, doublejump: 0 };
+const pw = { shield: 0, speed: 0, doublejump: 0, freeze: 0 };
 let doubleJumpUsed = false;
 
-const PW_DURATION = { shield: 360, speed: 360, doublejump: 480 };  // 6s / 6s / 8s
+const PW_DURATION = { shield: 360, speed: 360, doublejump: 480, freeze: 420 };  // 6s / 6s / 8s / 7s
 
 // ─── RTO Timer ────────────────────────────────────────────────────────────────
 const DEFAULT_RTO_FRAMES = 300 * 60;  // 5 minutes at 60fps
@@ -57,7 +59,7 @@ function startGame() {
   transitionFlash = 18;
   lives           = MAX_LIVES;
   checkpoint      = null;
-  pw.shield = pw.speed = pw.doublejump = 0;
+  pw.shield = pw.speed = pw.doublejump = pw.freeze = 0;
   doubleJumpUsed  = false;
   gameOverCause   = 'lives';
   particles.length = 0;
@@ -136,7 +138,7 @@ function getCurrentSectionName() {
 // ─── Player ───────────────────────────────────────────────────────────────────
 const player = {
   x: 48, y: 384,
-  w: 22, h: 30,
+  w: PLAYER_SMALL.w, h: PLAYER_SMALL.h,
   vx: 0, vy: 0,
   grounded:    false,
   wasGrounded: false,   // previous frame — used to detect landing
@@ -146,16 +148,45 @@ const player = {
   facing:      1,
   walkTick:    0,
   hitFlash:    0,
+  form:        'small',
+  canBreakBricks: false,
+  freezeTouch: false,
 };
+
+function setPlayerForm(form) {
+  const next = form === 'big' ? PLAYER_BIG : PLAYER_SMALL;
+  const footY = player.y + player.h;
+  player.form = form;
+  player.w = next.w;
+  player.h = next.h;
+  player.y = footY - player.h;
+  player.canBreakBricks = form === 'big';
+}
+
+function growPlayer() {
+  if (player.form === 'big') return false;
+  setPlayerForm('big');
+  player.hitFlash = 18;
+  return true;
+}
+
+function shrinkPlayer() {
+  if (player.form === 'small') return false;
+  setPlayerForm('small');
+  player.hitFlash = 40;
+  return true;
+}
 
 function respawn() {
   const s     = checkpoint || world.playerStart;
+  setPlayerForm('small');
   player.x    = s.x;
   player.y    = s.y;
   player.vx   = 0;
   player.vy   = 0;
   player.grounded = false;
   player.hitFlash = 40;
+  player.freezeTouch = false;
 }
 
 // ─── Goal state ───────────────────────────────────────────────────────────────
@@ -260,7 +291,9 @@ function update() {
   if (pw.shield     > 0) { pw.shield--;     if (player.hitFlash === 0) player.hitFlash = 2; }
   if (pw.speed      > 0)   pw.speed--;
   if (pw.doublejump > 0)   pw.doublejump--;
+  if (pw.freeze     > 0)   pw.freeze--;
   if (rtoFrames > 0) rtoFrames--;
+  player.freezeTouch = pw.freeze > 0;
 
   // Horizontal input
   const speedMult = pw.speed > 0 ? 1.7 : 1.0;
@@ -323,6 +356,17 @@ function update() {
   player.y += player.vy;
   resolveY(player);
 
+  if (player.brokenTiles?.length) {
+    for (const tile of player.brokenTiles) {
+      const wx = tile.col * TILE_SIZE + TILE_SIZE / 2;
+      const wy = tile.row * TILE_SIZE + TILE_SIZE / 2;
+      spawnBurst(wx, wy, 16, ['#ffd27a', '#9a6a22', '#fff4bf'], 1.0, 3.1);
+    }
+    addFloatingText(player.x + player.w / 2, player.y - 8, 'CRACK', '#ffd27a');
+    addShake(4, 10);
+    player.brokenTiles = null;
+  }
+
   // Land detection
   if (player.grounded && !player.wasGrounded) sfxLand();
   player.wasGrounded = player.grounded;
@@ -340,7 +384,12 @@ function update() {
       () => {
         if (player.hitFlash === 0 && pw.shield === 0) {
           addShake(8, 18);
-          loseLife();
+          if (player.form === 'big') {
+            shrinkPlayer();
+            addFloatingText(player.x + player.w / 2, player.y - 8, 'DOWNGRADE', '#aaffaa');
+          } else {
+            loseLife();
+          }
         }
       },
       (x, y) => {
@@ -353,6 +402,8 @@ function update() {
       (type, x, y) => {
         if (type === 'life') {
           lives = Math.min(MAX_LIVES + 1, lives + 1);
+        } else if (type === 'grow') {
+          growPlayer();
         } else {
           pw[type] = PW_DURATION[type];
         }
@@ -360,17 +411,27 @@ function update() {
           shield: ['#0088ff', '#88ddff', '#d8f6ff'],
           speed: ['#ffcc00', '#fff18a', '#ff9900'],
           doublejump: ['#00ddff', '#aaffff', '#3cf2ff'],
+          grow: ['#55cc55', '#c7ffb8', '#ffffff'],
+          freeze: ['#66e0ff', '#d7fbff', '#9de9ff'],
           life: ['#ff4455', '#ff8899', '#ffd0d6'],
         };
         const labelsByType = {
           shield: 'HA',
           speed: 'TR',
           doublejump: 'SN^2',
+          grow: 'UP',
+          freeze: 'STUN',
           life: '+1',
         };
         spawnBurst(x, y, 18, colorsByType[type] || ['#ffffff'], 0.8, 2.8);
         addFloatingText(x, y - 10, labelsByType[type] || type.toUpperCase(), '#ffffff');
         addShake(3, 10);
+        sfxCollect();
+      },
+      (x, y) => {
+        spawnBurst(x, y, 16, ['#66e0ff', '#d7fbff', '#b7f3ff'], 0.8, 2.5);
+        addFloatingText(x, y - 6, 'SNAP STUN', '#9feaff');
+        addShake(2, 8);
         sfxCollect();
       }
     );
@@ -463,6 +524,7 @@ function drawPlayer() {
   const sy = Math.round(player.y);
   const f  = player.facing;
   const inAir = !player.grounded;
+  const isBig = player.form === 'big';
 
   // Walk frame: legs alternate every 8 ticks
   const legPhase = Math.floor(player.walkTick / 8) % 2;
@@ -479,44 +541,49 @@ function drawPlayer() {
   ctx.fillStyle = 'rgba(0,0,0,0.3)';
   ctx.fillRect(sx + 2, sy + player.h - 2, player.w - 4, 4);
 
+  const headH = isBig ? 12 : 10;
+  const bodyY = headH - 1;
+  const bodyH = isBig ? 21 : 16;
+  const legY  = bodyY + bodyH;
+
   // Body
-  ctx.fillStyle = '#0088cc';
-  ctx.fillRect(sx + 2, sy + 6, player.w - 4, 16);
+  ctx.fillStyle = isBig ? '#27a0d8' : '#0088cc';
+  ctx.fillRect(sx + 2, sy + bodyY, player.w - 4, bodyH);
 
   // Head
-  ctx.fillStyle = '#00aaee';
-  ctx.fillRect(sx, sy, player.w, 10);
+  ctx.fillStyle = isBig ? '#45c2ff' : '#00aaee';
+  ctx.fillRect(sx, sy, player.w, headH);
 
   // Visor
   ctx.fillStyle = '#002244';
-  ctx.fillRect(sx + 2, sy + 2, player.w - 4, 6);
+  ctx.fillRect(sx + 2, sy + 2, player.w - 4, isBig ? 7 : 6);
 
   // Eyes (two dots in visor)
   ctx.fillStyle = inAir ? '#ff8800' : '#00ffaa';   // orange eyes when airborne
   ctx.fillRect(sx + 5,  sy + 3, 4, 3);
-  ctx.fillRect(sx + 13, sy + 3, 4, 3);
+  ctx.fillRect(sx + player.w - 9, sy + 3, 4, 3);
 
   // Backpack (right side, always)
   ctx.fillStyle = '#005588';
-  ctx.fillRect(sx + player.w - 2, sy + 6, 5, 10);
+  ctx.fillRect(sx + player.w - 2, sy + bodyY, 5, isBig ? 13 : 10);
 
   // Arms
-  const armY = inAir ? sy + 4 : sy + 8;   // arms up when jumping
+  const armY = inAir ? sy + (isBig ? 5 : 4) : sy + (isBig ? 10 : 8);   // arms up when jumping
   ctx.fillStyle = '#006699';
-  ctx.fillRect(sx - 4, armY, 6, 8);       // left arm
+  ctx.fillRect(sx - 4, armY, 6, isBig ? 10 : 8);       // left arm
 
   // Legs (animated when running, static otherwise)
   ctx.fillStyle = '#005588';
   if (inAir) {
     // Tuck legs
-    ctx.fillRect(sx + 3,  sy + 22, 7, 6);
-    ctx.fillRect(sx + 12, sy + 22, 7, 6);
+    ctx.fillRect(sx + 3,            sy + legY, 7, isBig ? 8 : 6);
+    ctx.fillRect(sx + player.w - 10, sy + legY, 7, isBig ? 8 : 6);
   } else if (legPhase === 0) {
-    ctx.fillRect(sx + 3,  sy + 22, 7, 8);
-    ctx.fillRect(sx + 12, sy + 22, 7, 4);
+    ctx.fillRect(sx + 3,             sy + legY, 7, isBig ? 11 : 8);
+    ctx.fillRect(sx + player.w - 10, sy + legY, 7, isBig ? 6 : 4);
   } else {
-    ctx.fillRect(sx + 3,  sy + 22, 7, 4);
-    ctx.fillRect(sx + 12, sy + 22, 7, 8);
+    ctx.fillRect(sx + 3,             sy + legY, 7, isBig ? 6 : 4);
+    ctx.fillRect(sx + player.w - 10, sy + legY, 7, isBig ? 11 : 8);
   }
 
   ctx.restore();
@@ -624,6 +691,7 @@ function drawHUD() {
     { key: 'shield',     label: 'HA',  color: '#0088ff', max: PW_DURATION.shield     },
     { key: 'speed',      label: 'TR',  color: '#ffcc00', max: PW_DURATION.speed      },
     { key: 'doublejump', label: 'SN²', color: '#00ddff', max: PW_DURATION.doublejump },
+    { key: 'freeze',     label: 'STN', color: '#66e0ff', max: PW_DURATION.freeze     },
   ].filter(p => pw[p.key] > 0);
 
   activePws.forEach((p, i) => {
@@ -653,6 +721,12 @@ function drawHUD() {
     ctx.fillStyle = doubleJumpUsed ? '#224444' : '#00ddff';
     ctx.font      = 'bold 11px monospace';
     ctx.fillText('▲▲', W / 2 - 12, 52);
+  }
+
+  if (player.form === 'big') {
+    ctx.fillStyle = '#aaffaa';
+    ctx.font      = 'bold 10px monospace';
+    ctx.fillText('UP FORM // BREAK BRICKS', 10, 50 + activePws.length * 18);
   }
 
   // Bottom debug bar

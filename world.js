@@ -33,6 +33,10 @@ function fillRect(tiles, colStart, colEnd, rowStart, rowEnd) {
   paintRect(tiles, colStart, colEnd, rowStart, rowEnd, 1);
 }
 
+function fillBreakableRect(tiles, colStart, colEnd, rowStart, rowEnd) {
+  paintRect(tiles, colStart, colEnd, rowStart, rowEnd, 2);
+}
+
 function clearRect(tiles, colStart, colEnd, rowStart, rowEnd) {
   paintRect(tiles, colStart, colEnd, rowStart, rowEnd, 0);
 }
@@ -99,6 +103,11 @@ function buildWorld11Tiles() {
   fillRect(tiles, 117, 118, 10, 12);
   fillRow(tiles, 9, 104, 117);
 
+  // Breakable maintenance bricks for big-form reward routes
+  fillBreakableRect(tiles, 109, 113, 11, 11);
+  fillBreakableRect(tiles, 148, 151, 9, 9);
+  fillBreakableRect(tiles, 170, 172, 11, 11);
+
   // Final backup vault shell
   fillRect(tiles, 172, 173, 8, 12);
   fillRect(tiles, 187, 187, 8, 12);
@@ -156,11 +165,15 @@ const LEVELS = {
     ],
     powerups: [
       { type: 'speed',      col:   8, row: 12 },  // reward the early gap clear
+      { type: 'grow',       col:  19, row:  9 },  // introduces brick-breaking form
       { type: 'doublejump', col:  41, row:  5 },  // supports the first big climb
       { type: 'shield',     col:  67, row:  1 },  // calm before the midpoint descent
+      { type: 'freeze',     col: 112, row: 10 },  // service-bay crowd control
       { type: 'speed',      col: 112, row:  8 },  // bonus route lure
       { type: 'life',       col: 131, row:  4 },  // high-risk optional reward
+      { type: 'grow',       col: 150, row:  8 },  // lets late-stage players crack brick stacks
       { type: 'doublejump', col: 148, row:  5 },  // helps the late staircase recover
+      { type: 'freeze',     col: 170, row: 10 },  // final crowd-control refresh
       { type: 'shield',     col: 169, row:  2 },  // final vault approach buffer
     ],
     // Enemies — patrol between patrolLeft and patrolRight (tile cols)
@@ -168,14 +181,17 @@ const LEVELS = {
       { type: 'rogue-packet', col:  16, row: 10, patrolLeft:  14, patrolRight:  20 },
       { type: 'rogue-packet', col:  28, row:  8, patrolLeft:  25, patrolRight:  31 },
       { type: 'rogue-packet', col:  39, row:  6, patrolLeft:  36, patrolRight:  42 },
+      { type: 'crypto-process', col:  52, row:  2, patrolLeft:  47, patrolRight:  57, amplitude: 12 },
       { type: 'rogue-packet', col:  78, row:  4, patrolLeft:  75, patrolRight:  82 },
       { type: 'rogue-packet', col: 118, row: 13, patrolLeft: 113, patrolRight: 124 },
+      { type: 'crypto-process', col: 114, row:  8, patrolLeft: 108, patrolRight: 120, amplitude: 14 },
       { type: 'rogue-packet', col: 126, row: 10, patrolLeft: 122, patrolRight: 129 },
       { type: 'rogue-packet', col: 136, row:  8, patrolLeft: 134, patrolRight: 140 },
       { type: 'rogue-packet', col: 147, row:  6, patrolLeft: 145, patrolRight: 151 },
       { type: 'rogue-packet', col: 160, row:  4, patrolLeft: 156, patrolRight: 163 },
+      { type: 'crypto-process', col: 171, row:  9, patrolLeft: 167, patrolRight: 178, amplitude: 10 },
     ],
-    tiles: buildWorld11Tiles(),
+    tileBuilder: buildWorld11Tiles,
   }
 };
 
@@ -183,7 +199,19 @@ const LEVELS = {
 let world = null;
 
 function loadLevel(id) {
-  world = LEVELS[id];
+  const base = LEVELS[id];
+  if (!base) return null;
+  world = {
+    ...base,
+    playerStart: { ...base.playerStart },
+    goal: { ...base.goal },
+    orbs: (base.orbs || []).map(o => ({ ...o })),
+    powerups: (base.powerups || []).map(p => ({ ...p })),
+    enemies: (base.enemies || []).map(e => ({ ...e })),
+    sections: (base.sections || []).map(s => ({ ...s })),
+    landmarks: (base.landmarks || []).map(l => ({ ...l })),
+    tiles: base.tileBuilder ? base.tileBuilder() : (base.tiles || []).map(row => row.slice()),
+  };
   return world;
 }
 
@@ -197,7 +225,16 @@ function tileAt(col, row) {
 }
 
 function isSolid(col, row) {
-  return tileAt(col, row) === 1;
+  return tileAt(col, row) !== 0;
+}
+
+function isBreakable(col, row) {
+  return tileAt(col, row) === 2;
+}
+
+function breakTile(col, row) {
+  if (!world || row < 0 || row >= world.rows || col < 0 || col >= world.cols) return;
+  world.tiles[row][col] = 0;
 }
 
 function pixToCol(x) { return Math.floor(x / TILE_SIZE); }
@@ -228,6 +265,7 @@ function resolveX(entity) {
 function resolveY(entity) {
   const leftCol  = pixToCol(entity.x + 1);
   const rightCol = pixToCol(entity.x + entity.w - 2);
+  entity.brokenTiles = null;
 
   if (entity.vy > 0) {
     const row = pixToRow(entity.y + entity.h);
@@ -238,7 +276,22 @@ function resolveY(entity) {
     }
   } else if (entity.vy < 0) {
     const row = pixToRow(entity.y);
-    if (isSolid(leftCol, row) || isSolid(rightCol, row)) {
+    const brokenTiles = [];
+    if (entity.canBreakBricks) {
+      if (isBreakable(leftCol, row)) {
+        breakTile(leftCol, row);
+        brokenTiles.push({ col: leftCol, row });
+      }
+      if (rightCol !== leftCol && isBreakable(rightCol, row)) {
+        breakTile(rightCol, row);
+        brokenTiles.push({ col: rightCol, row });
+      }
+    }
+    if (brokenTiles.length > 0) {
+      entity.y = (row + 1) * TILE_SIZE;
+      entity.vy = Math.max(0.8, entity.vy * -0.15);
+      entity.brokenTiles = brokenTiles;
+    } else if (isSolid(leftCol, row) || isSolid(rightCol, row)) {
       entity.y  = (row + 1) * TILE_SIZE;
       entity.vy = 0;
     }
@@ -254,27 +307,39 @@ function drawWorld(ctx, camX) {
 
   for (let row = 0; row < world.rows; row++) {
     for (let col = startCol; col < endCol; col++) {
-      if (tileAt(col, row) !== 1) continue;
+      const tile = tileAt(col, row);
+      if (tile === 0) continue;
 
       const sx = col * TILE_SIZE - camX;
       const sy = row * TILE_SIZE;
 
       // Body
-      ctx.fillStyle = '#152d15';
+      ctx.fillStyle = tile === 2 ? '#6b4a16' : '#152d15';
       ctx.fillRect(sx, sy, TILE_SIZE, TILE_SIZE);
 
       // Server rack panel lines
-      ctx.fillStyle = '#1e421e';
-      ctx.fillRect(sx + 2, sy + 6,  TILE_SIZE - 4, 4);
-      ctx.fillRect(sx + 2, sy + 14, TILE_SIZE - 4, 4);
-      ctx.fillRect(sx + 2, sy + 22, TILE_SIZE - 4, 4);
+      if (tile === 2) {
+        ctx.fillStyle = '#9a6a22';
+        ctx.fillRect(sx + 4, sy + 4, TILE_SIZE - 8, 3);
+        ctx.fillRect(sx + 4, sy + 13, TILE_SIZE - 8, 3);
+        ctx.fillRect(sx + 4, sy + 22, TILE_SIZE - 8, 3);
+        ctx.fillStyle = '#c79133';
+        ctx.fillRect(sx + 5, sy + 8, 4, 4);
+        ctx.fillRect(sx + 13, sy + 16, 4, 4);
+        ctx.fillRect(sx + 21, sy + 8, 4, 4);
+      } else {
+        ctx.fillStyle = '#1e421e';
+        ctx.fillRect(sx + 2, sy + 6,  TILE_SIZE - 4, 4);
+        ctx.fillRect(sx + 2, sy + 14, TILE_SIZE - 4, 4);
+        ctx.fillRect(sx + 2, sy + 22, TILE_SIZE - 4, 4);
+      }
 
       // Top highlight (lit edge)
-      ctx.fillStyle = '#3aaa3a';
+      ctx.fillStyle = tile === 2 ? '#ffd27a' : '#3aaa3a';
       ctx.fillRect(sx, sy, TILE_SIZE, 2);
 
       // Blinking LED (every 3rd tile in every other row)
-      if ((col + row) % 3 === 0) {
+      if (tile === 1 && (col + row) % 3 === 0) {
         ctx.fillStyle = (Math.floor(Date.now() / 800 + col) % 2 === 0) ? '#00ff41' : '#003310';
         ctx.fillRect(sx + TILE_SIZE - 6, sy + 4, 3, 3);
       }

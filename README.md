@@ -54,6 +54,8 @@ Touch controls are displayed automatically on mobile devices.
 | Blue diamond | `HA` | Invincibility + shield aura | 6 seconds |
 | Yellow diamond | `TR` | 1.7× speed + motion trail | 6 seconds |
 | Cyan diamond | `SN²` | Double jump | 8 seconds |
+| Green diamond | `UP` | Grow larger, survive one hit, break bricks | Until hit / death |
+| Ice diamond | `STN` | Snapshot stun aura freezes enemies on contact | 7 seconds |
 | Red diamond | `+1` | Extra life (instant) | — |
 
 ---
@@ -64,6 +66,8 @@ Touch controls are displayed automatically on mobile devices.
 - **Jump buffering** — 8-frame early jump input registration
 - **Variable jump height** — tap for a short hop, hold for full height
 - **Run-up jumps** — hold `Shift` to build speed and clear longer gaps
+- **Big form** — `UP` powerup makes you larger and lets you smash breakable bricks
+- **Snapshot stun** — `STN` powerup freezes enemies instead of taking contact damage
 - **Enemy stomp** — land on Rogue Packets to squash them; chain stomps for a bounce
 - **Squash & stretch** — enemies flatten with physics-accurate deformation on stomp
 - **Parallax background** — two-layer server rack scenery with animated LEDs
