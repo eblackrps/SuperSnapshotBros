@@ -116,6 +116,15 @@ function updateCamera(target) {
   cam.x        = Math.max(0, Math.min(ideal, levelW - W));
 }
 
+function getCurrentSectionName() {
+  if (!world?.sections) return '';
+  const playerCol = pixToCol(player.x + player.w / 2);
+  for (const section of world.sections) {
+    if (playerCol >= section.startCol && playerCol <= section.endCol) return section.label;
+  }
+  return world.sections[world.sections.length - 1]?.label || '';
+}
+
 // ─── Player ───────────────────────────────────────────────────────────────────
 const player = {
   x: 48, y: 384,
@@ -352,14 +361,19 @@ function update() {
     );
   }
 
-  // Checkpoint — set when an orb is newly collected
+  // Snapshot orbs — some are checkpoints, others are score-only collectibles
   for (const orb of entities.orbs) {
-    if (orb.collected && !orb.usedAsCheckpoint) {
-      orb.usedAsCheckpoint = true;
-      checkpointsActivated++;
-      checkpoint = { x: orb.x + orb.w / 2 - player.w / 2, y: orb.y - player.h };
-      spawnBurst(orb.x + orb.w / 2, orb.y + orb.h / 2, 14, ['#00ddff', '#aaffff', '#ffffff'], 0.8, 2.6);
-      addFloatingText(orb.x + orb.w / 2, orb.y - 8, 'CHECKPOINT', '#00ddff');
+    if (orb.collected && !orb.processedCollection) {
+      orb.processedCollection = true;
+      if (orb.checkpoint) {
+        checkpointsActivated++;
+        checkpoint = { x: orb.x + orb.w / 2 - player.w / 2, y: orb.y - player.h };
+        spawnBurst(orb.x + orb.w / 2, orb.y + orb.h / 2, 18, ['#ffd700', '#00ddff', '#ffffff'], 0.9, 3.0);
+        addFloatingText(orb.x + orb.w / 2, orb.y - 8, 'CHECKPOINT', '#ffd700');
+      } else {
+        spawnBurst(orb.x + orb.w / 2, orb.y + orb.h / 2, 10, ['#00ddff', '#aaffff', '#ffffff'], 0.7, 2.2);
+        addFloatingText(orb.x + orb.w / 2, orb.y - 8, 'SNAPSHOT', '#00ddff');
+      }
       sfxCollect();
     }
   }
@@ -528,7 +542,8 @@ function drawHUD() {
   // Level name
   ctx.fillStyle = '#3a8a3a';
   ctx.font = '10px monospace';
-  ctx.fillText(world.name, 10, 30);
+  const sectionName = getCurrentSectionName();
+  ctx.fillText(sectionName ? `${world.name}  //  ${sectionName}` : world.name, 10, 30);
 
   // Lives (top right)
   ctx.textAlign = 'right';
@@ -645,7 +660,8 @@ function getRunSummary() {
   const elapsedSeconds = Math.max(0, Math.round(elapsedMs / 1000));
   const rtoLeftRatio = Math.max(0, rtoFrames) / rtoMaxFrames;
   const orbRatio = entities.totalOrbs ? entities.orbsCollected / entities.totalOrbs : 0;
-  const checkpointRatio = Math.min(1, checkpointsActivated / 4);
+  const totalCheckpointOrbs = Math.max(1, entities.orbs.filter(orb => orb.checkpoint).length);
+  const checkpointRatio = Math.min(1, checkpointsActivated / totalCheckpointOrbs);
   const deathPenalty = Math.min(0.35, runDeaths * 0.08);
   const score = Math.max(0, Math.min(1,
     0.45 * rtoLeftRatio +

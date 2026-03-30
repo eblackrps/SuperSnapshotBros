@@ -115,6 +115,14 @@ const LEVELS = {
     rtoSeconds: 360,
     playerStart: { x: 48, y: 384 },
     goal: { col: 180, row: 1 },
+    sections: [
+      { startCol:   0, endCol:  21, label: 'Boot Corridor' },
+      { startCol:  22, endCol:  58, label: 'Packet Stair' },
+      { startCol:  59, endCol:  82, label: 'Summit Span' },
+      { startCol:  83, endCol: 121, label: 'Service Bay' },
+      { startCol: 122, endCol: 163, label: 'Degraded Spine' },
+      { startCol: 164, endCol: 187, label: 'Backup Vault' },
+    ],
     landmarks: [
       { col: 65,  color: '#00ff41' },  // summit
       { col: 108, color: '#00ddff' },  // midpoint restore bay
@@ -125,24 +133,24 @@ const LEVELS = {
     orbs: [
       // Boot corridor
       { col:  4, row: 12 },
-      { col: 10, row: 12 },
+      { col: 10, row: 12, checkpoint: true },
       // Packet ascent
       { col: 18, row:  9 },
       { col: 29, row:  7 },
-      { col: 40, row:  5 },
+      { col: 40, row:  5, checkpoint: true },
       { col: 52, row:  3 },
       // First summit
-      { col: 65, row:  1 },
+      { col: 65, row:  1, checkpoint: true },
       // Descent and midpoint
       { col: 79, row:  3 },
       { col: 90, row:  5 },
-      { col: 108, row: 12 },
+      { col: 108, row: 12, checkpoint: true },
       // Optional route and late climb
       { col: 121, row:  6 },
       { col: 137, row:  7 },
-      { col: 148, row:  5 },
+      { col: 148, row:  5, checkpoint: true },
       { col: 160, row:  3 },
-      { col: 169, row:  2 },
+      { col: 169, row:  2, checkpoint: true },
       // Vault finale
       { col: 180, row:  1 },
     ],

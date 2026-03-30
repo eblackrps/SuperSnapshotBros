@@ -2,11 +2,12 @@
 
 // ─── Snapshot Orb ─────────────────────────────────────────────────────────────
 class SnapshotOrb {
-  constructor(x, y) {
+  constructor(x, y, checkpoint = false) {
     this.x = x - 8;  // center on given pixel coord
     this.y = y - 8;
     this.w = 16;
     this.h = 16;
+    this.checkpoint = checkpoint;
     this.collected = false;
   }
 
@@ -21,13 +22,15 @@ class SnapshotOrb {
 
     // Outer glow ring
     const glow = 0.4 + 0.3 * Math.sin(t * 1.5);
-    ctx.fillStyle = `rgba(0, 210, 255, ${glow})`;
+    ctx.fillStyle = this.checkpoint
+      ? `rgba(255, 215, 80, ${glow})`
+      : `rgba(0, 210, 255, ${glow})`;
     ctx.beginPath();
-    ctx.arc(sx + 8, sy + 8 + bob, 10, 0, Math.PI * 2);
+    ctx.arc(sx + 8, sy + 8 + bob, this.checkpoint ? 12 : 10, 0, Math.PI * 2);
     ctx.fill();
 
     // Core
-    ctx.fillStyle = '#00ddff';
+    ctx.fillStyle = this.checkpoint ? '#ffd700' : '#00ddff';
     ctx.beginPath();
     ctx.arc(sx + 8, sy + 8 + bob, 6, 0, Math.PI * 2);
     ctx.fill();
@@ -40,7 +43,7 @@ class SnapshotOrb {
     ctx.fillStyle = '#003344';
     ctx.font = 'bold 5px monospace';
     ctx.textAlign = 'center';
-    ctx.fillText('SN', sx + 8, sy + 10 + bob);
+    ctx.fillText(this.checkpoint ? 'CP' : 'SN', sx + 8, sy + 10 + bob);
     ctx.textAlign = 'left';
   }
 
@@ -307,7 +310,11 @@ const entities = {
     this.orbsCollected = 0;
 
     for (const o of (level.orbs || [])) {
-      this.orbs.push(new SnapshotOrb(o.col * TILE_SIZE + 16, o.row * TILE_SIZE + 16));
+      this.orbs.push(new SnapshotOrb(
+        o.col * TILE_SIZE + 16,
+        o.row * TILE_SIZE + 16,
+        !!o.checkpoint
+      ));
     }
     this.totalOrbs = this.orbs.length;
 
