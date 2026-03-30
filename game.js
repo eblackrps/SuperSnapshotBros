@@ -41,8 +41,10 @@ let checkpoint = null;
 // Powerup timers (in frames) and double-jump flag
 const pw = { shield: 0, speed: 0, doublejump: 0, freeze: 0, fire: 0 };
 let doubleJumpUsed = false;
+let empFrames = 0;
 
 const PW_DURATION = { shield: 360, speed: 360, doublejump: 480, freeze: 420, fire: 420 };  // 6s / 6s / 8s / 7s / 7s
+const EMP_DURATION = 14;
 const projectiles = [];
 const shotCooldown = { freeze: 0, fire: 0 };
 const attackLatch = { freeze: false, fire: false };
@@ -70,6 +72,7 @@ function startGame() {
   checkpoint      = null;
   pw.shield = pw.speed = pw.doublejump = pw.freeze = pw.fire = 0;
   doubleJumpUsed  = false;
+  empFrames       = 0;
   gameOverCause   = 'lives';
   particles.length = 0;
   floatingTexts.length = 0;
@@ -201,6 +204,7 @@ function respawn() {
   player.grounded = false;
   player.hitFlash = 40;
   player.platformId = null;
+  empFrames = 0;
   projectiles.length = 0;
   shotCooldown.freeze = 0;
   shotCooldown.fire = 0;
@@ -454,6 +458,21 @@ function resolveMovingPlatforms(entity, prevBottom) {
   }
 }
 
+function refreshHazardEffects() {
+  const hazards = getOverlappingHazards(player);
+  const inEmp = hazards.some(hazard => hazard.type === 'emp');
+  if (inEmp) {
+    const wasInactive = empFrames === 0;
+    empFrames = Math.max(empFrames, EMP_DURATION);
+    if (wasInactive) {
+      spawnBurst(player.x + player.w / 2, player.y + player.h / 2, 14, ['#ffcc66', '#ff8844', '#fff0b8'], 0.6, 2.0);
+      addFloatingText(player.x + player.w / 2, player.y - 10, 'EMP JAM', '#ffcc66');
+      addShake(2, 8);
+    }
+  }
+  return inEmp;
+}
+
 // ─── Update ───────────────────────────────────────────────────────────────────
 function update() {
   if (levelComplete || gameState !== 'playing') return;
@@ -472,10 +491,12 @@ function update() {
   if (pw.doublejump > 0)   pw.doublejump--;
   if (pw.freeze     > 0)   pw.freeze--;
   if (pw.fire       > 0)   pw.fire--;
+  if (empFrames     > 0)   empFrames--;
   if (rtoFrames > 0) rtoFrames--;
 
   updatePlatforms();
   moveWithPlatform(player);
+  refreshHazardEffects();
 
   // Horizontal input
   const speedMult = pw.speed > 0 ? 1.7 : 1.0;
@@ -513,11 +534,17 @@ function update() {
   if (player.vy > MAX_FALL) player.vy = MAX_FALL;
 
   // Jump tracking
+  const jumpLocked = empFrames > 0;
   const jumpPressed = keys['ArrowUp'] || keys['KeyW'] || keys['Space'];
   if (!jumpPressed) player.jumping = false;
 
-  if (jumpPressed)                player.jumpBuffer = BUFFER_FRAMES;
-  else if (player.jumpBuffer > 0) player.jumpBuffer--;
+  if (!jumpLocked) {
+    if (jumpPressed)                player.jumpBuffer = BUFFER_FRAMES;
+    else if (player.jumpBuffer > 0) player.jumpBuffer--;
+  } else {
+    player.jumpBuffer = 0;
+    player.jumping = false;
+  }
 
   if (player.grounded)              player.coyoteTimer = COYOTE_FRAMES;
   else if (player.coyoteTimer > 0)  player.coyoteTimer--;
@@ -526,12 +553,12 @@ function update() {
 
   const freezeShotHeld = !!keys['AltLeft'];
   const fireShotHeld = !!keys['AltRight'];
-  if (freezeShotHeld && !attackLatch.freeze) tryShoot('freeze');
-  if (fireShotHeld && !attackLatch.fire) tryShoot('fire');
+  if (!jumpLocked && freezeShotHeld && !attackLatch.freeze) tryShoot('freeze');
+  if (!jumpLocked && fireShotHeld && !attackLatch.fire) tryShoot('fire');
   attackLatch.freeze = freezeShotHeld;
   attackLatch.fire = fireShotHeld;
 
-  if (player.jumpBuffer > 0 && player.coyoteTimer > 0) {
+  if (!jumpLocked && player.jumpBuffer > 0 && player.coyoteTimer > 0) {
     player.vy          = JUMP_FORCE;
     player.jumping     = true;
     player.grounded    = false;
@@ -539,7 +566,7 @@ function update() {
     player.coyoteTimer = 0;
     player.jumpBuffer  = 0;
     sfxJump();
-  } else if (player.jumpBuffer > 0 && !player.grounded && pw.doublejump > 0 && !doubleJumpUsed) {
+  } else if (!jumpLocked && player.jumpBuffer > 0 && !player.grounded && pw.doublejump > 0 && !doubleJumpUsed) {
     player.vy         = JUMP_FORCE * 0.88;
     player.jumping    = true;
     player.jumpBuffer = 0;
@@ -557,6 +584,7 @@ function update() {
   player.y += player.vy;
   resolveY(player);
   resolveMovingPlatforms(player, prevBottom);
+  refreshHazardEffects();
 
   if (player.brokenTiles?.length) {
     for (const tile of player.brokenTiles) {
@@ -799,6 +827,13 @@ function drawPlayer() {
     ctx.shadowBlur  = 0;
   }
 
+  if (empFrames > 0) {
+    const pulse = 0.35 + 0.3 * Math.sin(Date.now() / 80);
+    ctx.strokeStyle = `rgba(255,180,80,${pulse})`;
+    ctx.lineWidth   = 2;
+    ctx.strokeRect(Math.round(player.x - cam.x) - 6, player.y - 6, player.w + 12, player.h + 12);
+  }
+
   // Speed trail
   if (pw.speed > 0 && (keys['ArrowLeft'] || keys['KeyA'] || keys['ArrowRight'] || keys['KeyD'])) {
     ctx.globalAlpha = 0.25;
@@ -939,6 +974,13 @@ function drawHUD() {
     ctx.fillStyle = hint.color;
     ctx.font      = 'bold 9px monospace';
     ctx.fillText(hint.label, 10, infoY);
+    infoY += 14;
+  }
+
+  if (empFrames > 0) {
+    ctx.fillStyle = '#ffbb66';
+    ctx.font      = 'bold 9px monospace';
+    ctx.fillText('EMP JAM // JUMP + SHOTS OFFLINE', 10, infoY);
     infoY += 14;
   }
 
@@ -1316,6 +1358,7 @@ function drawTitle() {
   drawBg();
   drawParallax();
   drawWorld(ctx, cam.x);
+  drawHazards(ctx, cam.x);
   drawPlatforms(ctx, cam.x);
   entities.draw(ctx, cam.x);
 
@@ -1695,6 +1738,7 @@ function loop() {
       ctx.translate(sx, sy);
     }
     drawWorld(ctx, cam.x);
+    drawHazards(ctx, cam.x);
     drawPlatforms(ctx, cam.x);
     entities.draw(ctx, cam.x);
     drawProjectiles(cam.x);

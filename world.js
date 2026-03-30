@@ -148,6 +148,17 @@ function createPlatformState(def, index) {
   return platform;
 }
 
+function createHazardState(def, index) {
+  return {
+    ...def,
+    id: index,
+    w: (def.wTiles || 1) * TILE_SIZE,
+    h: (def.hTiles || 1) * TILE_SIZE,
+    x: def.col * TILE_SIZE,
+    y: def.row * TILE_SIZE,
+  };
+}
+
 const LEVELS = {
   '1-1': {
     name: 'World 1-1 — Hypervisor Crash',
@@ -230,6 +241,10 @@ const LEVELS = {
       { col: 131, row: 11, wTiles: 2, axis: 'y', travelTiles: 2, periodFrames: 220, phase: 0.72 },
       { col: 152, row: 8,  wTiles: 2, axis: 'x', travelTiles: 3, periodFrames: 200, phase: 0.18 },
     ],
+    hazards: [
+      { type: 'emp', col: 95, row: 11, wTiles: 3, hTiles: 2 },
+      { type: 'emp', col: 155, row: 9, wTiles: 2, hTiles: 3 },
+    ],
     tileBuilder: buildWorld11Tiles,
   }
 };
@@ -248,6 +263,7 @@ function loadLevel(id) {
     powerups: (base.powerups || []).map(p => ({ ...p })),
     enemies: (base.enemies || []).map(e => ({ ...e })),
     platforms: (base.platforms || []).map((p, index) => createPlatformState({ ...p }, index)),
+    hazards: (base.hazards || []).map((h, index) => createHazardState({ ...h }, index)),
     sections: (base.sections || []).map(s => ({ ...s })),
     landmarks: (base.landmarks || []).map(l => ({ ...l })),
     tiles: base.tileBuilder ? base.tileBuilder() : (base.tiles || []).map(row => row.slice()),
@@ -265,6 +281,18 @@ function updatePlatforms() {
     platform.dx = platform.x - platform.prevX;
     platform.dy = platform.y - platform.prevY;
   }
+}
+
+function rectOverlapsHazard(x, y, w, h, hazard) {
+  return x + w > hazard.x &&
+         x < hazard.x + hazard.w &&
+         y + h > hazard.y &&
+         y < hazard.y + hazard.h;
+}
+
+function getOverlappingHazards(entity) {
+  if (!world?.hazards) return [];
+  return world.hazards.filter(hazard => rectOverlapsHazard(entity.x, entity.y, entity.w, entity.h, hazard));
 }
 
 // ─── Tile queries ─────────────────────────────────────────────────────────────
@@ -446,6 +474,34 @@ function drawPlatforms(ctx, camX) {
     ctx.font = 'bold 6px monospace';
     ctx.textAlign = 'center';
     ctx.fillText('SYNC', sx + Math.round(platform.w / 2), sy + 9);
+    ctx.textAlign = 'left';
+  }
+}
+
+function drawHazards(ctx, camX) {
+  if (!world?.hazards) return;
+
+  for (const hazard of world.hazards) {
+    const sx = Math.round(hazard.x - camX);
+    const sy = Math.round(hazard.y);
+    const pulse = 0.4 + 0.25 * Math.sin(Date.now() / 140 + hazard.id);
+
+    ctx.fillStyle = `rgba(255, 80, 0, ${0.08 + pulse * 0.08})`;
+    ctx.fillRect(sx, sy, hazard.w, hazard.h);
+
+    ctx.strokeStyle = `rgba(255, 170, 0, ${0.35 + pulse * 0.35})`;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(sx + 1, sy + 1, hazard.w - 2, hazard.h - 2);
+
+    ctx.fillStyle = `rgba(255, 220, 120, ${0.18 + pulse * 0.12})`;
+    for (let y = sy + 4; y < sy + hazard.h - 2; y += 8) {
+      ctx.fillRect(sx + 3, y, hazard.w - 6, 2);
+    }
+
+    ctx.fillStyle = '#ffdd88';
+    ctx.font = 'bold 7px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('EMP', sx + Math.round(hazard.w / 2), sy + Math.round(hazard.h / 2) + 3);
     ctx.textAlign = 'left';
   }
 }
