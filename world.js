@@ -102,6 +102,8 @@ function buildWorld11Tiles() {
   fillRect(tiles, 103, 104, 10, 12);
   fillRect(tiles, 117, 118, 10, 12);
   fillRow(tiles, 9, 104, 117);
+  clearRect(tiles, 104, 104, 11, 12);
+  clearRect(tiles, 117, 117, 11, 12);
 
   // Breakable maintenance bricks for big-form reward routes
   fillBreakableRect(tiles, 109, 113, 11, 11);
