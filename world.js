@@ -5,6 +5,8 @@ const LEVEL_ROWS = 14;
 const WORLD_1_1_COLS = 188;
 const WORLD_1_2_COLS = 196;
 const WORLD_1_3_COLS = 208;
+const WORLD_1_4_COLS = 216;
+const WORLD_1_5_COLS = 220;
 
 // ─── Level Data ───────────────────────────────────────────────────────────────
 // 0 = empty, 1 = solid
@@ -236,6 +238,118 @@ function buildWorld13Tiles() {
 
   // Final roof
   fillRow(tiles, 4, 194, 205);
+
+  return tiles;
+}
+
+function buildWorld14Tiles() {
+  const tiles = createTileGrid(WORLD_1_4_COLS, LEVEL_ROWS);
+
+  fillRow(tiles, 13, 0, WORLD_1_4_COLS - 1);
+
+  const groundGaps = [
+    [8, 10],
+    [24, 26],
+    [42, 44],
+    [61, 63],
+    [83, 86],
+    [104, 107],
+    [126, 129],
+    [148, 151],
+    [171, 174],
+    [194, 197],
+  ];
+  for (const [start, end] of groundGaps) clearRect(tiles, start, end, 13, 13);
+
+  fillRow(tiles, 10, 14, 21);
+  fillRow(tiles, 8, 28, 35);
+  fillRow(tiles, 6, 40, 47);
+
+  fillRow(tiles, 10, 56, 63);
+  fillRow(tiles, 7, 58, 65);
+  fillRow(tiles, 5, 70, 77);
+  fillRow(tiles, 9, 82, 89);
+
+  fillRow(tiles, 10, 96, 103);
+  fillRow(tiles, 8, 108, 115);
+  fillRow(tiles, 6, 120, 127);
+  fillRow(tiles, 4, 132, 139);
+
+  fillRow(tiles, 9, 146, 153);
+  fillRow(tiles, 7, 158, 165);
+  fillRow(tiles, 5, 170, 177);
+
+  fillRow(tiles, 10, 186, 193);
+  fillRow(tiles, 8, 198, 204);
+  fillRow(tiles, 6, 206, 214);
+
+  fillRect(tiles, 56, 57, 11, 12);
+  fillRect(tiles, 64, 65, 8, 12);
+  fillRect(tiles, 96, 97, 11, 12);
+  fillRect(tiles, 138, 139, 5, 12);
+  fillRect(tiles, 206, 207, 7, 12);
+  fillRect(tiles, 213, 214, 7, 12);
+
+  fillBreakableRect(tiles, 109, 112, 9, 9);
+  fillBreakableRect(tiles, 172, 175, 6, 6);
+
+  fillRow(tiles, 7, 206, 214);
+
+  return tiles;
+}
+
+function buildWorld15Tiles() {
+  const tiles = createTileGrid(WORLD_1_5_COLS, LEVEL_ROWS);
+
+  fillRow(tiles, 13, 0, WORLD_1_5_COLS - 1);
+
+  const groundGaps = [
+    [10, 12],
+    [26, 28],
+    [44, 46],
+    [66, 69],
+    [90, 93],
+    [114, 117],
+    [138, 141],
+    [160, 163],
+  ];
+  for (const [start, end] of groundGaps) clearRect(tiles, start, end, 13, 13);
+
+  fillRow(tiles, 10, 14, 21);
+  fillRow(tiles, 8, 30, 37);
+  fillRow(tiles, 6, 48, 55);
+
+  fillRow(tiles, 10, 58, 66);
+  fillRow(tiles, 8, 72, 80);
+  fillRow(tiles, 6, 86, 94);
+
+  fillRow(tiles, 9, 100, 107);
+  fillRow(tiles, 7, 112, 119);
+  fillRow(tiles, 5, 124, 131);
+  fillRow(tiles, 4, 136, 143);
+
+  fillRow(tiles, 10, 148, 155);
+  fillRow(tiles, 8, 160, 167);
+  fillRow(tiles, 6, 172, 179);
+
+  fillRow(tiles, 11, 186, 214);
+  fillRow(tiles, 10, 194, 198);
+  fillRow(tiles, 8, 202, 207);
+  fillRow(tiles, 6, 209, 214);
+
+  fillRect(tiles, 58, 59, 11, 12);
+  fillRect(tiles, 66, 67, 11, 12);
+  fillRect(tiles, 100, 101, 10, 12);
+  fillRect(tiles, 118, 119, 8, 12);
+  fillRect(tiles, 186, 187, 8, 12);
+  fillRect(tiles, 214, 215, 6, 12);
+  fillRect(tiles, 208, 208, 7, 12);
+
+  fillBreakableRect(tiles, 72, 74, 9, 9);
+  fillBreakableRect(tiles, 160, 162, 9, 9);
+  fillBreakableRect(tiles, 174, 176, 7, 7);
+
+  fillRow(tiles, 7, 188, 214);
 
   return tiles;
 }
@@ -542,6 +656,182 @@ const LEVELS = {
       { type: 'corruption', col: 174, row:  7, wTiles: 2, hTiles: 3 },
     ],
     tileBuilder: buildWorld13Tiles,
+  },
+  '1-4': {
+    name: 'World 1-4 — Failover Spine',
+    subtitle: 'Split routes, mirrored shelves, and fallback transfers',
+    cols: WORLD_1_4_COLS,
+    rows: LEVEL_ROWS,
+    rtoSeconds: 450,
+    playerStart: { x: 48, y: 384 },
+    goal: { col: 210, row: 5 },
+    sections: [
+      { startCol:   0, endCol:  43, label: 'Failover Boot' },
+      { startCol:  44, endCol:  89, label: 'Mirror Route' },
+      { startCol:  90, endCol: 139, label: 'Transfer Bus' },
+      { startCol: 140, endCol: 183, label: 'Fallback Bridge' },
+      { startCol: 184, endCol: 215, label: 'Spine Core' },
+    ],
+    landmarks: [
+      { col: 34,  color: '#00ddff' },
+      { col: 75,  color: '#ffaa00' },
+      { col: 118, color: '#66ff99' },
+      { col: 166, color: '#ffd27a' },
+      { col: 210, color: '#ffd700' },
+    ],
+    orbs: [
+      { col:   6, row: 12 },
+      { col:  15, row: 12, checkpoint: true },
+      { col:  22, row:  9 },
+      { col:  34, row:  7 },
+      { col:  57, row:  9, checkpoint: true },
+      { col:  72, row:  4 },
+      { col:  85, row:  8 },
+      { col: 101, row: 10 },
+      { col: 114, row:  7, checkpoint: true },
+      { col: 129, row:  5 },
+      { col: 145, row:  8 },
+      { col: 159, row:  6, checkpoint: true },
+      { col: 173, row:  4 },
+      { col: 188, row:  9 },
+      { col: 201, row:  7, checkpoint: true },
+      { col: 210, row:  5 },
+    ],
+    powerups: [
+      { type: 'grow',       col:  18, row:  9 },
+      { type: 'rollback',   col:  31, row:  7 },
+      { type: 'speed',      col:  60, row:  6 },
+      { type: 'doublejump', col:  76, row:  4 },
+      { type: 'immutable',  col:  98, row: 10 },
+      { type: 'freeze',     col: 111, row:  7 },
+      { type: 'shield',     col: 127, row:  5 },
+      { type: 'rollback',   col: 149, row:  8 },
+      { type: 'fire',       col: 162, row:  6 },
+      { type: 'speed',      col: 176, row:  4 },
+      { type: 'life',       col: 189, row:  9 },
+      { type: 'grow',       col: 206, row:  5 },
+    ],
+    enemies: [
+      { type: 'rogue-packet',   col:  16, row: 10, patrolLeft: 14, patrolRight: 21 },
+      { type: 'rogue-packet',   col:  30, row:  8, patrolLeft: 28, patrolRight: 35 },
+      { type: 'crypto-process', col:  44, row:  6, patrolLeft: 40, patrolRight: 47, amplitude: 10 },
+      { type: 'rogue-packet',   col:  58, row: 10, patrolLeft: 56, patrolRight: 63 },
+      { type: 'crypto-process', col:  73, row:  5, patrolLeft: 70, patrolRight: 77, amplitude: 11 },
+      { type: 'rogue-packet',   col:  84, row:  9, patrolLeft: 82, patrolRight: 89 },
+      { type: 'rogue-packet',   col: 100, row: 10, patrolLeft: 96, patrolRight: 103 },
+      { type: 'crypto-process', col: 113, row:  8, patrolLeft: 108, patrolRight: 115, amplitude: 12 },
+      { type: 'rogue-packet',   col: 124, row:  6, patrolLeft: 120, patrolRight: 127 },
+      { type: 'rogue-packet',   col: 148, row:  9, patrolLeft: 146, patrolRight: 153 },
+      { type: 'crypto-process', col: 161, row:  7, patrolLeft: 158, patrolRight: 165, amplitude: 10 },
+      { type: 'rogue-packet',   col: 173, row:  5, patrolLeft: 170, patrolRight: 177 },
+      { type: 'crypto-process', col: 200, row:  7, patrolLeft: 198, patrolRight: 204, amplitude: 8 },
+    ],
+    platforms: [
+      { col: 49,  row: 11, wTiles: 2, axis: 'y', travelTiles: 3, periodFrames: 220, phase: 0.12 },
+      { col: 68,  row:  8, wTiles: 2, axis: 'x', travelTiles: 4, periodFrames: 210, phase: 0.44 },
+      { col: 91,  row: 10, wTiles: 2, axis: 'y', travelTiles: 2, periodFrames: 190, phase: 0.76 },
+      { col: 118, row:  7, wTiles: 2, axis: 'x', travelTiles: 3, periodFrames: 195, phase: 0.34 },
+      { col: 154, row:  8, wTiles: 2, axis: 'y', travelTiles: 2, periodFrames: 180, phase: 0.58 },
+      { col: 183, row:  6, wTiles: 2, axis: 'x', travelTiles: 4, periodFrames: 170, phase: 0.18 },
+    ],
+    hazards: [
+      { type: 'emp',        col:  51, row: 10, wTiles: 2, hTiles: 2 },
+      { type: 'corruption', col:  67, row:  8, wTiles: 3, hTiles: 2 },
+      { type: 'emp',        col:  92, row: 10, wTiles: 2, hTiles: 2 },
+      { type: 'corruption', col: 116, row:  8, wTiles: 2, hTiles: 3 },
+      { type: 'emp',        col: 154, row:  8, wTiles: 2, hTiles: 2 },
+      { type: 'corruption', col: 182, row:  8, wTiles: 3, hTiles: 2 },
+    ],
+    tileBuilder: buildWorld14Tiles,
+  },
+  '1-5': {
+    name: 'World 1-5 — Snapshot Bastion',
+    subtitle: 'Vaulted restore paths and a ransomware warden',
+    cols: WORLD_1_5_COLS,
+    rows: LEVEL_ROWS,
+    rtoSeconds: 480,
+    playerStart: { x: 48, y: 384 },
+    goal: { col: 212, row: 5 },
+    requiresBossDefeat: true,
+    sections: [
+      { startCol:   0, endCol:  45, label: 'Ledger Gate' },
+      { startCol:  46, endCol:  95, label: 'Mirror Cache' },
+      { startCol:  96, endCol: 145, label: 'Restore Hall' },
+      { startCol: 146, endCol: 185, label: 'Vault Mouth' },
+      { startCol: 186, endCol: 219, label: 'Warden Arena' },
+    ],
+    landmarks: [
+      { col: 33,  color: '#00ddff' },
+      { col: 74,  color: '#55ffcc' },
+      { col: 122, color: '#ffaa00' },
+      { col: 168, color: '#66ff99' },
+      { col: 212, color: '#ffd700' },
+    ],
+    orbs: [
+      { col:   6, row: 12 },
+      { col:  14, row: 12, checkpoint: true },
+      { col:  21, row:  9 },
+      { col:  33, row:  7 },
+      { col:  52, row:  5, checkpoint: true },
+      { col:  64, row:  9 },
+      { col:  78, row:  7 },
+      { col:  91, row:  5 },
+      { col: 103, row:  8, checkpoint: true },
+      { col: 118, row:  6 },
+      { col: 132, row:  4 },
+      { col: 149, row:  9, checkpoint: true },
+      { col: 165, row:  7 },
+      { col: 177, row:  5 },
+      { col: 191, row: 10, checkpoint: true },
+      { col: 198, row:  9 },
+      { col: 205, row:  7 },
+      { col: 212, row:  5 },
+    ],
+    powerups: [
+      { type: 'grow',       col:  18, row:  9 },
+      { type: 'rollback',   col:  36, row:  7 },
+      { type: 'doublejump', col:  54, row:  5 },
+      { type: 'immutable',  col:  73, row:  7 },
+      { type: 'freeze',     col:  92, row:  5 },
+      { type: 'shield',     col: 110, row:  8 },
+      { type: 'rollback',   col: 128, row:  4 },
+      { type: 'fire',       col: 150, row:  9 },
+      { type: 'immutable',  col: 166, row:  6 },
+      { type: 'life',       col: 176, row:  5 },
+      { type: 'grow',       col: 194, row: 10 },
+      { type: 'freeze',     col: 204, row:  7 },
+      { type: 'fire',       col: 210, row:  5 },
+    ],
+    enemies: [
+      { type: 'rogue-packet',      col:  17, row: 10, patrolLeft: 14, patrolRight: 21 },
+      { type: 'crypto-process',    col:  34, row:  8, patrolLeft: 30, patrolRight: 37, amplitude: 10 },
+      { type: 'rogue-packet',      col:  51, row:  6, patrolLeft: 48, patrolRight: 55 },
+      { type: 'rogue-packet',      col:  60, row: 10, patrolLeft: 58, patrolRight: 66 },
+      { type: 'crypto-process',    col:  76, row:  8, patrolLeft: 72, patrolRight: 80, amplitude: 12 },
+      { type: 'rogue-packet',      col:  91, row:  6, patrolLeft: 86, patrolRight: 94 },
+      { type: 'rogue-packet',      col: 102, row:  9, patrolLeft: 100, patrolRight: 107 },
+      { type: 'crypto-process',    col: 116, row:  7, patrolLeft: 112, patrolRight: 119, amplitude: 11 },
+      { type: 'rogue-packet',      col: 127, row:  5, patrolLeft: 124, patrolRight: 131 },
+      { type: 'rogue-packet',      col: 150, row: 10, patrolLeft: 148, patrolRight: 155 },
+      { type: 'crypto-process',    col: 163, row:  8, patrolLeft: 160, patrolRight: 167, amplitude: 10 },
+      { type: 'rogue-packet',      col: 174, row:  6, patrolLeft: 172, patrolRight: 179 },
+      { type: 'ransomware-warden', col: 197, row: 11, arenaLeft: 188, arenaRight: 214 },
+    ],
+    platforms: [
+      { col: 45,  row: 11, wTiles: 2, axis: 'y', travelTiles: 3, periodFrames: 220, phase: 0.22 },
+      { col: 96,  row: 10, wTiles: 2, axis: 'x', travelTiles: 3, periodFrames: 200, phase: 0.62 },
+      { col: 141, row:  8, wTiles: 2, axis: 'y', travelTiles: 2, periodFrames: 190, phase: 0.42 },
+      { col: 181, row:  7, wTiles: 2, axis: 'x', travelTiles: 4, periodFrames: 170, phase: 0.18 },
+    ],
+    hazards: [
+      { type: 'corruption', col:  68, row: 10, wTiles: 2, hTiles: 2 },
+      { type: 'emp',        col:  84, row:  8, wTiles: 2, hTiles: 2 },
+      { type: 'corruption', col: 108, row:  7, wTiles: 3, hTiles: 2 },
+      { type: 'emp',        col: 144, row: 10, wTiles: 2, hTiles: 2 },
+      { type: 'corruption', col: 170, row:  8, wTiles: 2, hTiles: 2 },
+      { type: 'corruption', col: 183, row: 10, wTiles: 2, hTiles: 2 },
+    ],
+    tileBuilder: buildWorld15Tiles,
   }
 };
 
@@ -727,14 +1017,23 @@ function drawWorld(ctx, camX) {
   const gx   = g.col * TILE_SIZE - camX + 6;
   const gy   = g.row * TILE_SIZE;
   const glow = 0.6 + 0.4 * Math.sin(Date.now() / 300);
+  const goalLocked = !!(world.requiresBossDefeat && typeof entities !== 'undefined' && entities.enemies?.some(enemy => enemy.isBoss && !enemy.dead));
 
-  ctx.fillStyle = `rgba(255, 200, 0, ${glow})`;
+  ctx.fillStyle = goalLocked
+    ? `rgba(255, 80, 120, ${glow * 0.8})`
+    : `rgba(255, 200, 0, ${glow})`;
   ctx.fillRect(gx, gy, 20, 28);
 
   ctx.fillStyle = '#000';
   ctx.font = 'bold 7px monospace';
-  ctx.fillText('BCK', gx + 1, gy + 11);
-  ctx.fillText('UP', gx + 3, gy + 20);
+  ctx.fillText(goalLocked ? 'LCK' : 'BCK', gx + 1, gy + 11);
+  ctx.fillText(goalLocked ? 'DWN' : 'UP', gx + 3, gy + 20);
+
+  if (goalLocked) {
+    ctx.strokeStyle = 'rgba(255, 170, 190, 0.75)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(gx - 3, gy - 3, 26, 34);
+  }
 }
 
 function drawPlatforms(ctx, camX) {
