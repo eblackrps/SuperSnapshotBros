@@ -4,6 +4,7 @@ const TILE_SIZE = 32;
 const LEVEL_ROWS = 14;
 const WORLD_1_1_COLS = 188;
 const WORLD_1_2_COLS = 196;
+const WORLD_1_3_COLS = 208;
 
 // ─── Level Data ───────────────────────────────────────────────────────────────
 // 0 = empty, 1 = solid
@@ -178,6 +179,67 @@ function buildWorld12Tiles() {
   return tiles;
 }
 
+function buildWorld13Tiles() {
+  const tiles = createTileGrid(WORLD_1_3_COLS, LEVEL_ROWS);
+
+  // Ground backbone
+  fillRow(tiles, 13, 0, WORLD_1_3_COLS - 1);
+
+  // Broken archive floor
+  const groundGaps = [
+    [9, 11],
+    [24, 26],
+    [40, 42],
+    [63, 66],
+    [87, 89],
+    [112, 115],
+    [136, 138],
+    [161, 164],
+    [183, 186],
+  ];
+  for (const [start, end] of groundGaps) clearRect(tiles, start, end, 13, 13);
+
+  // Warm-up shelves
+  fillRow(tiles, 10, 14, 21);
+  fillRow(tiles, 8, 28, 35);
+  fillRow(tiles, 6, 44, 51);
+
+  // Redacted archive zone
+  fillRow(tiles, 9, 56, 63);
+  fillRow(tiles, 7, 68, 75);
+  fillRow(tiles, 5, 80, 87);
+
+  // Midpoint backup corridor
+  fillRow(tiles, 10, 96, 103);
+  fillRow(tiles, 8, 108, 115);
+  fillRow(tiles, 6, 120, 127);
+  fillRow(tiles, 4, 132, 139);
+
+  // Final immutable spine
+  fillRow(tiles, 9, 145, 152);
+  fillRow(tiles, 7, 157, 164);
+  fillRow(tiles, 5, 169, 176);
+  fillRow(tiles, 4, 181, 188);
+  fillRow(tiles, 3, 192, 205);
+
+  // Visual anchor towers
+  fillRect(tiles, 56, 57, 10, 12);
+  fillRect(tiles, 62, 63, 10, 12);
+  fillRect(tiles, 96, 97, 11, 12);
+  fillRect(tiles, 114, 115, 9, 12);
+  fillRect(tiles, 192, 194, 4, 12);
+  fillRect(tiles, 203, 205, 4, 12);
+
+  // Breakable vault caches
+  fillBreakableRect(tiles, 108, 111, 9, 9);
+  fillBreakableRect(tiles, 170, 172, 6, 6);
+
+  // Final roof
+  fillRow(tiles, 4, 194, 205);
+
+  return tiles;
+}
+
 function positionPlatform(platform) {
   const travelPx = (platform.travelTiles || 0) * TILE_SIZE;
   const offset   = Math.sin(platform.t * Math.PI * 2) * travelPx;
@@ -222,6 +284,7 @@ function createHazardState(def, index) {
 const LEVELS = {
   '1-1': {
     name: 'World 1-1 — Hypervisor Crash',
+    subtitle: 'Onboarding through the first cascading outage',
     cols: WORLD_1_1_COLS,
     rows: LEVEL_ROWS,
     rtoSeconds: 360,
@@ -309,6 +372,7 @@ const LEVELS = {
   },
   '1-2': {
     name: 'World 1-2 — Replication Lag',
+    subtitle: 'Sync lifts, delayed routes, and unstable timing',
     cols: WORLD_1_2_COLS,
     rows: LEVEL_ROWS,
     rtoSeconds: 390,
@@ -390,6 +454,94 @@ const LEVELS = {
       { type: 'emp', col: 166, row:  8, wTiles: 2, hTiles: 3 },
     ],
     tileBuilder: buildWorld12Tiles,
+  },
+  '1-3': {
+    name: 'World 1-3 — Immutable Backup',
+    subtitle: 'Hardened restore paths through corruption fields',
+    cols: WORLD_1_3_COLS,
+    rows: LEVEL_ROWS,
+    rtoSeconds: 420,
+    playerStart: { x: 48, y: 384 },
+    goal: { col: 199, row: 2 },
+    sections: [
+      { startCol:   0, endCol:  39, label: 'Cold Archive' },
+      { startCol:  40, endCol:  87, label: 'Redacted Shelf' },
+      { startCol:  88, endCol: 139, label: 'Backup Corridor' },
+      { startCol: 140, endCol: 179, label: 'Quarantine Mesh' },
+      { startCol: 180, endCol: 207, label: 'Immutable Core' },
+    ],
+    landmarks: [
+      { col: 47,  color: '#00ff41' },
+      { col: 84,  color: '#ff5566' },
+      { col: 112, color: '#66ff99' },
+      { col: 168, color: '#ffaa00' },
+      { col: 199, color: '#ffd700' },
+    ],
+    orbs: [
+      { col:  6, row: 12 },
+      { col: 14, row: 12, checkpoint: true },
+      { col: 21, row:  9 },
+      { col: 33, row:  7 },
+      { col: 48, row:  5, checkpoint: true },
+      { col: 60, row:  8 },
+      { col: 73, row:  6 },
+      { col: 85, row:  4, checkpoint: true },
+      { col: 98, row: 10 },
+      { col: 112, row:  7 },
+      { col: 126, row:  5, checkpoint: true },
+      { col: 144, row:  8 },
+      { col: 159, row:  6 },
+      { col: 172, row:  4, checkpoint: true },
+      { col: 187, row:  3 },
+      { col: 199, row:  2 },
+    ],
+    powerups: [
+      { type: 'grow',       col:  18, row:  9 },
+      { type: 'doublejump', col:  44, row:  5 },
+      { type: 'immutable',  col:  66, row:  7 },
+      { type: 'shield',     col:  79, row:  5 },
+      { type: 'freeze',     col:  94, row: 10 },
+      { type: 'immutable',  col: 112, row:  7 },
+      { type: 'life',       col: 110, row:  8 },
+      { type: 'fire',       col: 125, row:  5 },
+      { type: 'speed',      col: 146, row:  8 },
+      { type: 'immutable',  col: 160, row:  6 },
+      { type: 'grow',       col: 171, row:  4 },
+      { type: 'doublejump', col: 186, row:  3 },
+      { type: 'shield',     col: 198, row:  2 },
+    ],
+    enemies: [
+      { type: 'rogue-packet', col:  16, row: 10, patrolLeft: 14, patrolRight: 21 },
+      { type: 'rogue-packet', col:  30, row:  8, patrolLeft: 28, patrolRight: 35 },
+      { type: 'rogue-packet', col:  46, row:  6, patrolLeft: 44, patrolRight: 51 },
+      { type: 'crypto-process', col:  59, row:  8, patrolLeft: 56, patrolRight: 63, amplitude: 10 },
+      { type: 'rogue-packet', col:  71, row:  7, patrolLeft: 68, patrolRight: 75 },
+      { type: 'crypto-process', col:  84, row:  4, patrolLeft: 80, patrolRight: 87, amplitude: 12 },
+      { type: 'rogue-packet', col: 100, row: 10, patrolLeft: 96, patrolRight: 103 },
+      { type: 'rogue-packet', col: 111, row:  8, patrolLeft: 108, patrolRight: 115 },
+      { type: 'crypto-process', col: 124, row:  6, patrolLeft: 120, patrolRight: 127, amplitude: 11 },
+      { type: 'rogue-packet', col: 147, row:  9, patrolLeft: 145, patrolRight: 152 },
+      { type: 'rogue-packet', col: 159, row:  7, patrolLeft: 157, patrolRight: 164 },
+      { type: 'crypto-process', col: 171, row:  5, patrolLeft: 169, patrolRight: 176, amplitude: 10 },
+      { type: 'rogue-packet', col: 185, row:  4, patrolLeft: 181, patrolRight: 188 },
+    ],
+    platforms: [
+      { col: 88,  row: 11, wTiles: 2, axis: 'y', travelTiles: 3, periodFrames: 210, phase: 0.22 },
+      { col: 103, row: 7,  wTiles: 2, axis: 'x', travelTiles: 4, periodFrames: 200, phase: 0.52 },
+      { col: 138, row: 9,  wTiles: 2, axis: 'y', travelTiles: 2, periodFrames: 190, phase: 0.68 },
+      { col: 166, row: 6,  wTiles: 2, axis: 'x', travelTiles: 3, periodFrames: 180, phase: 0.14 },
+      { col: 189, row: 5,  wTiles: 2, axis: 'y', travelTiles: 2, periodFrames: 170, phase: 0.44 },
+    ],
+    hazards: [
+      { type: 'corruption', col: 52,  row: 11, wTiles: 3, hTiles: 2 },
+      { type: 'corruption', col: 76,  row:  9, wTiles: 2, hTiles: 3 },
+      { type: 'emp',        col: 92,  row: 10, wTiles: 2, hTiles: 2 },
+      { type: 'corruption', col: 104, row:  8, wTiles: 3, hTiles: 2 },
+      { type: 'corruption', col: 140, row: 10, wTiles: 3, hTiles: 2 },
+      { type: 'emp',        col: 154, row:  9, wTiles: 2, hTiles: 3 },
+      { type: 'corruption', col: 174, row:  7, wTiles: 2, hTiles: 3 },
+    ],
+    tileBuilder: buildWorld13Tiles,
   }
 };
 
@@ -630,22 +782,42 @@ function drawHazards(ctx, camX) {
     const sy = Math.round(hazard.y);
     const pulse = 0.4 + 0.25 * Math.sin(Date.now() / 140 + hazard.id);
 
-    ctx.fillStyle = `rgba(255, 80, 0, ${0.08 + pulse * 0.08})`;
-    ctx.fillRect(sx, sy, hazard.w, hazard.h);
+    if (hazard.type === 'corruption') {
+      ctx.fillStyle = `rgba(255, 30, 80, ${0.08 + pulse * 0.1})`;
+      ctx.fillRect(sx, sy, hazard.w, hazard.h);
 
-    ctx.strokeStyle = `rgba(255, 170, 0, ${0.35 + pulse * 0.35})`;
-    ctx.lineWidth = 2;
-    ctx.strokeRect(sx + 1, sy + 1, hazard.w - 2, hazard.h - 2);
+      ctx.strokeStyle = `rgba(255, 90, 140, ${0.4 + pulse * 0.35})`;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(sx + 1, sy + 1, hazard.w - 2, hazard.h - 2);
 
-    ctx.fillStyle = `rgba(255, 220, 120, ${0.18 + pulse * 0.12})`;
-    for (let y = sy + 4; y < sy + hazard.h - 2; y += 8) {
-      ctx.fillRect(sx + 3, y, hazard.w - 6, 2);
+      ctx.fillStyle = `rgba(255, 180, 210, ${0.2 + pulse * 0.14})`;
+      for (let x = sx + 4; x < sx + hazard.w - 4; x += 10) {
+        ctx.fillRect(x, sy + 4, 2, hazard.h - 8);
+      }
+
+      ctx.fillStyle = '#ffd6e3';
+      ctx.font = 'bold 7px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('CRC', sx + Math.round(hazard.w / 2), sy + Math.round(hazard.h / 2) + 3);
+      ctx.textAlign = 'left';
+    } else {
+      ctx.fillStyle = `rgba(255, 80, 0, ${0.08 + pulse * 0.08})`;
+      ctx.fillRect(sx, sy, hazard.w, hazard.h);
+
+      ctx.strokeStyle = `rgba(255, 170, 0, ${0.35 + pulse * 0.35})`;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(sx + 1, sy + 1, hazard.w - 2, hazard.h - 2);
+
+      ctx.fillStyle = `rgba(255, 220, 120, ${0.18 + pulse * 0.12})`;
+      for (let y = sy + 4; y < sy + hazard.h - 2; y += 8) {
+        ctx.fillRect(sx + 3, y, hazard.w - 6, 2);
+      }
+
+      ctx.fillStyle = '#ffdd88';
+      ctx.font = 'bold 7px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('EMP', sx + Math.round(hazard.w / 2), sy + Math.round(hazard.h / 2) + 3);
+      ctx.textAlign = 'left';
     }
-
-    ctx.fillStyle = '#ffdd88';
-    ctx.font = 'bold 7px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText('EMP', sx + Math.round(hazard.w / 2), sy + Math.round(hazard.h / 2) + 3);
-    ctx.textAlign = 'left';
   }
 }

@@ -348,6 +348,7 @@ const POWERUP_DEFS = {
   speed:      { color: '#ffcc00', inner: '#ffff88', label: 'TR',  desc: 'TURBO REPL'   },
   doublejump: { color: '#00ddff', inner: '#aaffff', label: 'SN²', desc: 'SNAP CHAIN'   },
   grow:       { color: '#55cc55', inner: '#c7ffb8', label: 'UP',  desc: 'SCALE UP'      },
+  immutable:  { color: '#55cc77', inner: '#e6ffe9', label: 'IMM', desc: 'IMMUTABLE'     },
   freeze:     { color: '#66e0ff', inner: '#e6fcff', label: 'STN', desc: 'SNAP STUN'     },
   fire:       { color: '#ff7722', inner: '#ffd29a', label: 'FIR', desc: 'PURGE BURST'   },
   life:       { color: '#ff4455', inner: '#ffaaaa', label: '+1',  desc: 'EXTRA REPLICA' },
