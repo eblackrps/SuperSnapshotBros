@@ -33,13 +33,19 @@ let doubleJumpUsed = false;
 const PW_DURATION = { shield: 360, speed: 360, doublejump: 480 };  // 6s / 6s / 8s
 
 // ─── RTO Timer ────────────────────────────────────────────────────────────────
-const RTO_MAX_FRAMES = 300 * 60;  // 5 minutes at 60fps
-let rtoFrames = RTO_MAX_FRAMES;
+const DEFAULT_RTO_FRAMES = 300 * 60;  // 5 minutes at 60fps
+let rtoMaxFrames = DEFAULT_RTO_FRAMES;
+let rtoFrames = rtoMaxFrames;
 let gameOverCause = 'lives';
 const SITE_URL = 'https://anystackarchitect.com';
 let runDeaths = 0;
 let checkpointsActivated = 0;
 let runStartedAt = 0;
+
+function getLevelRtoFrames(level) {
+  const seconds = Math.max(120, level?.rtoSeconds || 300);
+  return seconds * 60;
+}
 
 function startGame() {
   gameState       = 'playing';
@@ -49,7 +55,6 @@ function startGame() {
   checkpoint      = null;
   pw.shield = pw.speed = pw.doublejump = 0;
   doubleJumpUsed  = false;
-  rtoFrames       = RTO_MAX_FRAMES;
   gameOverCause   = 'lives';
   particles.length = 0;
   floatingTexts.length = 0;
@@ -59,6 +64,8 @@ function startGame() {
   checkpointsActivated = 0;
   runStartedAt = Date.now();
   loadLevel('1-1');
+  rtoMaxFrames    = getLevelRtoFrames(world);
+  rtoFrames       = rtoMaxFrames;
   entities.init(world);
   respawn();
   Music.start();
@@ -537,6 +544,44 @@ function drawHUD() {
   ctx.fillText(`SN: ${entities.orbsCollected} / ${entities.totalOrbs}`, W - 10, 33);
   ctx.textAlign = 'left';
 
+  // Level progress strip for longer Mario-style stages
+  const goalPx = world.goal.col * TILE_SIZE + 16;
+  const playerPx = player.x + player.w / 2;
+  const trackX = 220, trackY = 26, trackW = 330, trackH = 5;
+  const playerRatio = Math.max(0, Math.min(1, playerPx / Math.max(goalPx, 1)));
+
+  ctx.fillStyle = '#1a5a1a';
+  ctx.font      = '8px monospace';
+  ctx.fillText('PATH', trackX - 34, trackY + 4);
+  ctx.fillStyle = 'rgba(0,0,0,0.45)';
+  ctx.fillRect(trackX, trackY, trackW, trackH);
+  ctx.fillStyle = '#114411';
+  ctx.fillRect(trackX + 1, trackY + 1, trackW - 2, trackH - 2);
+  ctx.fillStyle = '#2a8a2a';
+  ctx.fillRect(trackX + 1, trackY + 1, Math.max(2, Math.round((trackW - 2) * playerRatio)), trackH - 2);
+
+  if (world.landmarks) {
+    for (const marker of world.landmarks) {
+      const ratio = Math.max(0, Math.min(1, marker.col / Math.max(world.goal.col, 1)));
+      const mx = trackX + Math.round(trackW * ratio);
+      ctx.fillStyle = marker.color || '#88aa88';
+      ctx.fillRect(mx, trackY - 2, 2, trackH + 4);
+    }
+  }
+
+  if (checkpoint) {
+    const checkpointRatio = Math.max(0, Math.min(1, (checkpoint.x + player.w / 2) / Math.max(goalPx, 1)));
+    const cx = trackX + Math.round(trackW * checkpointRatio);
+    ctx.fillStyle = '#00ddff';
+    ctx.fillRect(cx - 1, trackY - 4, 4, trackH + 8);
+  }
+
+  const px = trackX + Math.round(trackW * playerRatio);
+  ctx.fillStyle = '#00ffaa';
+  ctx.fillRect(px - 2, trackY - 3, 5, trackH + 6);
+  ctx.fillStyle = '#ffd700';
+  ctx.fillRect(trackX + trackW - 4, trackY - 3, 6, trackH + 6);
+
   // Checkpoint indicator
   if (checkpoint) {
     ctx.fillStyle = '#00aaff';
@@ -566,9 +611,10 @@ function drawHUD() {
   const totalSeconds = Math.ceil(rtoFrames / 60);
   const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
   const seconds = String(totalSeconds % 60).padStart(2, '0');
+  const rtoWarnFrames = Math.min(60 * 60, Math.round(rtoMaxFrames * 0.18));
   ctx.textAlign = 'right';
   ctx.font      = 'bold 11px monospace';
-  ctx.fillStyle = rtoFrames <= 30 * 60 ? '#ff6666' : '#ffd700';
+  ctx.fillStyle = rtoFrames <= rtoWarnFrames ? '#ff6666' : '#ffd700';
   ctx.fillText(`RTO ${minutes}:${seconds}`, W - 10, 48);
   ctx.textAlign = 'left';
 
@@ -597,7 +643,7 @@ function drawHUD() {
 function getRunSummary() {
   const elapsedMs = runStartedAt ? (Date.now() - runStartedAt) : 0;
   const elapsedSeconds = Math.max(0, Math.round(elapsedMs / 1000));
-  const rtoLeftRatio = Math.max(0, rtoFrames) / RTO_MAX_FRAMES;
+  const rtoLeftRatio = Math.max(0, rtoFrames) / rtoMaxFrames;
   const orbRatio = entities.totalOrbs ? entities.orbsCollected / entities.totalOrbs : 0;
   const checkpointRatio = Math.min(1, checkpointsActivated / 4);
   const deathPenalty = Math.min(0.35, runDeaths * 0.08);

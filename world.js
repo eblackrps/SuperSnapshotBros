@@ -94,6 +94,16 @@ function buildWorld11Tiles() {
   fillRect(tiles, 174, 176, 3, 12);
   fillRect(tiles, 184, 186, 3, 12);
 
+  // Midpoint service bay landmark
+  fillRect(tiles, 103, 104, 10, 12);
+  fillRect(tiles, 117, 118, 10, 12);
+  fillRow(tiles, 9, 104, 117);
+
+  // Final backup vault shell
+  fillRect(tiles, 172, 173, 8, 12);
+  fillRect(tiles, 187, 187, 8, 12);
+  fillRow(tiles, 8, 173, 186);
+
   return tiles;
 }
 
@@ -102,8 +112,15 @@ const LEVELS = {
     name: 'World 1-1 — Hypervisor Crash',
     cols: WORLD_1_1_COLS,
     rows: LEVEL_ROWS,
+    rtoSeconds: 360,
     playerStart: { x: 48, y: 384 },
     goal: { col: 180, row: 1 },
+    landmarks: [
+      { col: 65,  color: '#00ff41' },  // summit
+      { col: 108, color: '#00ddff' },  // midpoint restore bay
+      { col: 147, color: '#ffaa00' },  // late degraded spine
+      { col: 180, color: '#ffd700' },  // vault
+    ],
     // Snapshot Orbs — also serve as restore-point checkpoints
     orbs: [
       // Boot corridor
@@ -144,11 +161,11 @@ const LEVELS = {
       { type: 'rogue-packet', col:  28, row:  8, patrolLeft:  25, patrolRight:  31 },
       { type: 'rogue-packet', col:  39, row:  6, patrolLeft:  36, patrolRight:  42 },
       { type: 'rogue-packet', col:  78, row:  4, patrolLeft:  75, patrolRight:  82 },
-      { type: 'rogue-packet', col: 110, row: 13, patrolLeft: 104, patrolRight: 120 },
-      { type: 'rogue-packet', col: 123, row: 10, patrolLeft: 122, patrolRight: 129 },
+      { type: 'rogue-packet', col: 118, row: 13, patrolLeft: 113, patrolRight: 124 },
+      { type: 'rogue-packet', col: 126, row: 10, patrolLeft: 122, patrolRight: 129 },
       { type: 'rogue-packet', col: 136, row:  8, patrolLeft: 134, patrolRight: 140 },
       { type: 'rogue-packet', col: 147, row:  6, patrolLeft: 145, patrolRight: 151 },
-      { type: 'rogue-packet', col: 158, row:  4, patrolLeft: 156, patrolRight: 163 },
+      { type: 'rogue-packet', col: 160, row:  4, patrolLeft: 156, patrolRight: 163 },
     ],
     tiles: buildWorld11Tiles(),
   }
