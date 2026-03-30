@@ -2,11 +2,12 @@
 
 // ─── Snapshot Orb ─────────────────────────────────────────────────────────────
 class SnapshotOrb {
-  constructor(x, y) {
+  constructor(x, y, checkpoint = false) {
     this.x = x - 8;  // center on given pixel coord
     this.y = y - 8;
     this.w = 16;
     this.h = 16;
+    this.checkpoint = checkpoint;
     this.collected = false;
   }
 
@@ -21,13 +22,15 @@ class SnapshotOrb {
 
     // Outer glow ring
     const glow = 0.4 + 0.3 * Math.sin(t * 1.5);
-    ctx.fillStyle = `rgba(0, 210, 255, ${glow})`;
+    ctx.fillStyle = this.checkpoint
+      ? `rgba(255, 215, 80, ${glow})`
+      : `rgba(0, 210, 255, ${glow})`;
     ctx.beginPath();
-    ctx.arc(sx + 8, sy + 8 + bob, 10, 0, Math.PI * 2);
+    ctx.arc(sx + 8, sy + 8 + bob, this.checkpoint ? 12 : 10, 0, Math.PI * 2);
     ctx.fill();
 
     // Core
-    ctx.fillStyle = '#00ddff';
+    ctx.fillStyle = this.checkpoint ? '#ffd700' : '#00ddff';
     ctx.beginPath();
     ctx.arc(sx + 8, sy + 8 + bob, 6, 0, Math.PI * 2);
     ctx.fill();
@@ -40,7 +43,7 @@ class SnapshotOrb {
     ctx.fillStyle = '#003344';
     ctx.font = 'bold 5px monospace';
     ctx.textAlign = 'center';
-    ctx.fillText('SN', sx + 8, sy + 10 + bob);
+    ctx.fillText(this.checkpoint ? 'CP' : 'SN', sx + 8, sy + 10 + bob);
     ctx.textAlign = 'left';
   }
 
@@ -65,11 +68,16 @@ class RoguePacket {
     this.patrolRight = patrolRight;
     this.tick        = 0;
     this.dead        = false;
+    this.frozen      = 0;
   }
 
   update() {
     if (this.dead) return;
     this.tick++;
+    if (this.frozen > 0) {
+      this.frozen--;
+      return;
+    }
     this.x += this.vx;
     if (this.x <= this.patrolLeft || this.x + this.w >= this.patrolRight) {
       this.vx *= -1;
@@ -127,7 +135,26 @@ class RoguePacket {
     if (!overlapX || !overlapY) return null;
     // Stomp: player must be moving downward AND feet in the top 75% of the enemy
     if (player.vy > 0 && player.y + player.h < this.y + this.h * 0.75) return 'stomp';
-    return 'hit';
+    return this.frozen > 0 ? null : 'hit';
+  }
+
+  freeze() {
+    if (this.dead) return;
+    this.frozen = 240;
+  }
+
+  hitByProjectile(type) {
+    if (this.dead) return null;
+    if (type === 'freeze') {
+      if (this.frozen > 0) return null;
+      this.freeze();
+      return 'freeze';
+    }
+    if (type === 'fire') {
+      this.stomp();
+      return 'burn';
+    }
+    return null;
   }
 
   stomp() {
@@ -173,7 +200,7 @@ class RoguePacket {
 
     const sx     = Math.round(this.x - camX);
     const sy     = Math.round(this.y);
-    const glitch = this.tick % 10 < 2;
+    const glitch = this.frozen > 0 ? false : this.tick % 10 < 2;
     const dx     = glitch ? (Math.random() > 0.5 ? 3 : -2) : 0;
 
     // Shadow
@@ -181,7 +208,7 @@ class RoguePacket {
     ctx.fillRect(sx + 2, sy + 2, this.w, this.h);
 
     // Body
-    ctx.fillStyle = glitch ? '#ff2222' : '#cc0000';
+    ctx.fillStyle = this.frozen > 0 ? '#8adfff' : glitch ? '#ff2222' : '#cc0000';
     ctx.fillRect(sx + dx, sy, this.w, this.h);
 
     // Glitch stripe
@@ -191,10 +218,10 @@ class RoguePacket {
     }
 
     // Corrupted pixel noise
-    ctx.fillStyle = '#ff6666';
+    ctx.fillStyle = this.frozen > 0 ? '#dff8ff' : '#ff6666';
     ctx.fillRect(sx + dx + 2,  sy + 2,  4, 4);
     ctx.fillRect(sx + dx + 14, sy + 14, 4, 4);
-    ctx.fillStyle = '#ffaaaa';
+    ctx.fillStyle = this.frozen > 0 ? '#77ddff' : '#ffaaaa';
     ctx.fillRect(sx + dx + 10, sy + 4,  2, 2);
     ctx.fillRect(sx + dx + 4,  sy + 14, 2, 2);
 
@@ -202,13 +229,116 @@ class RoguePacket {
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 6px monospace';
     ctx.textAlign = 'center';
-    ctx.fillText('ERR', sx + dx + 11, sy + 14);
+    ctx.fillText(this.frozen > 0 ? 'ICE' : 'ERR', sx + dx + 11, sy + 14);
     ctx.textAlign = 'left';
 
     // Direction indicator
-    ctx.fillStyle = '#ff4444';
+    ctx.fillStyle = this.frozen > 0 ? '#bff6ff' : '#ff4444';
     if (this.vx > 0) ctx.fillRect(sx + this.w + 1, sy + 8, 4, 6);
     else              ctx.fillRect(sx - 5,           sy + 8, 4, 6);
+  }
+}
+
+// ─── Crypto Process ───────────────────────────────────────────────────────────
+class CryptoProcess {
+  constructor(x, y, patrolLeft, patrolRight, amplitude = 12) {
+    this.x           = x;
+    this.baseY       = y;
+    this.y           = y;
+    this.w           = 20;
+    this.h           = 20;
+    this.vx          = 0.75;
+    this.patrolLeft  = patrolLeft;
+    this.patrolRight = patrolRight;
+    this.amplitude   = amplitude;
+    this.tick        = Math.random() * Math.PI * 2;
+    this.dead        = false;
+    this.frozen      = 0;
+  }
+
+  update() {
+    if (this.dead) return;
+    this.tick += 0.08;
+    if (this.frozen > 0) {
+      this.frozen--;
+      this.y = this.baseY + Math.sin(this.tick) * 2;
+      return;
+    }
+    this.x += this.vx;
+    if (this.x <= this.patrolLeft || this.x + this.w >= this.patrolRight) {
+      this.vx *= -1;
+      this.x  += this.vx * 2;
+    }
+    this.y = this.baseY + Math.sin(this.tick) * this.amplitude;
+  }
+
+  collideWith(player) {
+    if (this.dead) return null;
+    const overlapX = player.x + player.w - 2 > this.x && player.x + 2 < this.x + this.w;
+    const overlapY = player.y + player.h     > this.y && player.y     < this.y + this.h;
+    if (!overlapX || !overlapY) return null;
+    if (player.vy > 0 && player.y + player.h < this.y + this.h * 0.62) return 'stomp';
+    return this.frozen > 0 ? null : 'hit';
+  }
+
+  freeze() {
+    if (this.dead) return;
+    this.frozen = 240;
+  }
+
+  hitByProjectile(type) {
+    if (this.dead) return null;
+    if (type === 'freeze') {
+      if (this.frozen > 0) return null;
+      this.freeze();
+      return 'freeze';
+    }
+    if (type === 'fire') {
+      this.stomp();
+      return 'burn';
+    }
+    return null;
+  }
+
+  stomp() {
+    this.dead = true;
+    this.popTick = 18;
+  }
+
+  draw(ctx, camX) {
+    const sx = Math.round(this.x - camX);
+    const sy = Math.round(this.y);
+
+    if (this.dead) {
+      if (this.popTick <= 0) return;
+      this.popTick--;
+      const progress = 1 - this.popTick / 18;
+      ctx.globalAlpha = 1 - progress;
+      ctx.strokeStyle = '#77ffff';
+      ctx.lineWidth   = 2;
+      ctx.strokeRect(sx - progress * 10, sy - progress * 10, this.w + progress * 20, this.h + progress * 20);
+      ctx.globalAlpha = 1;
+      return;
+    }
+
+    const frozenPulse = this.frozen > 0 ? 0.5 + 0.5 * Math.sin(Date.now() / 120) : 0;
+    ctx.fillStyle = this.frozen > 0 ? '#99e6ff' : '#7a1aff';
+    ctx.fillRect(sx + 2, sy + 2, this.w, this.h);
+    ctx.fillStyle = this.frozen > 0 ? '#dff7ff' : '#bb66ff';
+    ctx.fillRect(sx, sy, this.w, this.h);
+    ctx.fillStyle = this.frozen > 0 ? '#77ddff' : '#330055';
+    ctx.fillRect(sx + 4, sy + 4, this.w - 8, 6);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 6px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(this.frozen > 0 ? 'ICE' : 'ENC', sx + 10, sy + 13);
+    ctx.textAlign = 'left';
+
+    if (this.frozen > 0) {
+      ctx.strokeStyle = `rgba(180,245,255,${0.35 + frozenPulse * 0.35})`;
+      ctx.lineWidth   = 2;
+      ctx.strokeRect(sx - 2, sy - 2, this.w + 4, this.h + 4);
+    }
   }
 }
 
@@ -217,6 +347,10 @@ const POWERUP_DEFS = {
   shield:     { color: '#0088ff', inner: '#88ddff', label: 'HA',  desc: 'HIGH AVAIL'   },
   speed:      { color: '#ffcc00', inner: '#ffff88', label: 'TR',  desc: 'TURBO REPL'   },
   doublejump: { color: '#00ddff', inner: '#aaffff', label: 'SN²', desc: 'SNAP CHAIN'   },
+  grow:       { color: '#55cc55', inner: '#c7ffb8', label: 'UP',  desc: 'SCALE UP'      },
+  immutable:  { color: '#55cc77', inner: '#e6ffe9', label: 'IMM', desc: 'IMMUTABLE'     },
+  freeze:     { color: '#66e0ff', inner: '#e6fcff', label: 'STN', desc: 'SNAP STUN'     },
+  fire:       { color: '#ff7722', inner: '#ffd29a', label: 'FIR', desc: 'PURGE BURST'   },
   life:       { color: '#ff4455', inner: '#ffaaaa', label: '+1',  desc: 'EXTRA REPLICA' },
 };
 
@@ -307,7 +441,11 @@ const entities = {
     this.orbsCollected = 0;
 
     for (const o of (level.orbs || [])) {
-      this.orbs.push(new SnapshotOrb(o.col * TILE_SIZE + 16, o.row * TILE_SIZE + 16));
+      this.orbs.push(new SnapshotOrb(
+        o.col * TILE_SIZE + 16,
+        o.row * TILE_SIZE + 16,
+        !!o.checkpoint
+      ));
     }
     this.totalOrbs = this.orbs.length;
 
@@ -318,6 +456,14 @@ const entities = {
           e.row  * TILE_SIZE - 22,
           e.patrolLeft  * TILE_SIZE,
           e.patrolRight * TILE_SIZE
+        ));
+      } else if (e.type === 'crypto-process') {
+        this.enemies.push(new CryptoProcess(
+          e.col  * TILE_SIZE,
+          e.row  * TILE_SIZE - 18,
+          e.patrolLeft  * TILE_SIZE,
+          e.patrolRight * TILE_SIZE,
+          e.amplitude || 12
         ));
       }
     }
@@ -345,7 +491,7 @@ const entities = {
       if (result === 'stomp') {
         player.y = enemy.y - player.h;
         enemy.stomp();
-        onStomp();
+        onStomp(enemy.x + enemy.w / 2, enemy.y);
       } else if (result === 'hit') {
         onHit();
       }
@@ -354,7 +500,7 @@ const entities = {
       pw.update();
       if (pw.overlaps(player)) {
         pw.collected = true;
-        onPowerup(pw.type);
+        onPowerup(pw.type, pw.x + pw.w / 2, pw.y + pw.h / 2);
       }
     }
   },
