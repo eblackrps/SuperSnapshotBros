@@ -22,6 +22,8 @@ Open `index.html` in any modern browser. No server required.
 | `D` / `→` | Move right |
 | `Shift` | Run / build longer jump momentum |
 | `W` / `↑` / `Space` | Jump |
+| `Left Alt` | Fire cold shot when `STN` is active |
+| `Right Alt` | Fire purge burst when `FIR` is active |
 | `Esc` | Pause / Resume |
 | `R` (paused) | Restart level |
 | `M` | Mute / Unmute |
@@ -42,6 +44,7 @@ Touch controls are displayed automatically on mobile devices.
 | **HA Powerup** | High Availability — temporary invincibility |
 | **TR Powerup** | Turbo Replication — movement speed boost |
 | **SN² Powerup** | Snapshot Chain — mid-air double jump |
+| **FIR Powerup** | Purge Burst — temporary fire projectile |
 | **+1 Powerup** | Extra Replica — bonus life |
 | **World 1-1** | *Hypervisor Crash* — the inciting incident |
 
@@ -55,7 +58,8 @@ Touch controls are displayed automatically on mobile devices.
 | Yellow diamond | `TR` | 1.7× speed + motion trail | 6 seconds |
 | Cyan diamond | `SN²` | Double jump | 8 seconds |
 | Green diamond | `UP` | Grow larger, survive one hit, break bricks | Until hit / death |
-| Ice diamond | `STN` | Snapshot stun aura freezes enemies on contact | 7 seconds |
+| Ice diamond | `STN` | Enables ice shots on `Left Alt` that freeze enemies | 7 seconds |
+| Orange diamond | `FIR` | Enables fire shots on `Right Alt` that purge enemies | 7 seconds |
 | Red diamond | `+1` | Extra life (instant) | — |
 
 ---
@@ -67,7 +71,7 @@ Touch controls are displayed automatically on mobile devices.
 - **Variable jump height** — tap for a short hop, hold for full height
 - **Run-up jumps** — hold `Shift` to build speed and clear longer gaps
 - **Big form** — `UP` powerup makes you larger and lets you smash breakable bricks
-- **Snapshot stun** — `STN` powerup freezes enemies instead of taking contact damage
+- **Alt-fired powers** — `Left Alt` shoots ice and `Right Alt` shoots fire when those powerups are active
 - **Enemy stomp** — land on Rogue Packets to squash them; chain stomps for a bounce
 - **Squash & stretch** — enemies flatten with physics-accurate deformation on stomp
 - **Parallax background** — two-layer server rack scenery with animated LEDs

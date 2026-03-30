@@ -14,12 +14,18 @@ const MOVE_SPEED    = 0.72;
 const RUN_SPEED     = 0.92;
 const WALK_MAX_VX   = 4.8;
 const RUN_MAX_VX    = 6.3;
-const FRICTION      = 0.86;
-const RUN_FRICTION  = 0.92;
+const GROUND_BRAKE  = 0.72;
+const RUN_GROUND_BRAKE = 0.8;
+const TURN_BRAKE    = 0.82;
+const AIR_DRAG      = 0.995;
+const STOP_EPSILON  = 0.14;
 const COYOTE_FRAMES = 6;
 const BUFFER_FRAMES = 8;
 const PLAYER_SMALL  = { w: 22, h: 30 };
 const PLAYER_BIG    = { w: 26, h: 44 };
+const SHOT_SPEED    = 8.4;
+const SHOT_LIFE     = 56;
+const SHOT_COOLDOWN = 14;
 
 // ─── Game state ───────────────────────────────────────────────────────────────
 // 'title' | 'playing' | 'paused' | 'gameover' | 'complete'
@@ -33,10 +39,13 @@ const MAX_LIVES     = 3;
 let checkpoint = null;
 
 // Powerup timers (in frames) and double-jump flag
-const pw = { shield: 0, speed: 0, doublejump: 0, freeze: 0 };
+const pw = { shield: 0, speed: 0, doublejump: 0, freeze: 0, fire: 0 };
 let doubleJumpUsed = false;
 
-const PW_DURATION = { shield: 360, speed: 360, doublejump: 480, freeze: 420 };  // 6s / 6s / 8s / 7s
+const PW_DURATION = { shield: 360, speed: 360, doublejump: 480, freeze: 420, fire: 420 };  // 6s / 6s / 8s / 7s / 7s
+const projectiles = [];
+const shotCooldown = { freeze: 0, fire: 0 };
+const attackLatch = { freeze: false, fire: false };
 
 // ─── RTO Timer ────────────────────────────────────────────────────────────────
 const DEFAULT_RTO_FRAMES = 300 * 60;  // 5 minutes at 60fps
@@ -59,11 +68,16 @@ function startGame() {
   transitionFlash = 18;
   lives           = MAX_LIVES;
   checkpoint      = null;
-  pw.shield = pw.speed = pw.doublejump = pw.freeze = 0;
+  pw.shield = pw.speed = pw.doublejump = pw.freeze = pw.fire = 0;
   doubleJumpUsed  = false;
   gameOverCause   = 'lives';
   particles.length = 0;
   floatingTexts.length = 0;
+  projectiles.length = 0;
+  shotCooldown.freeze = 0;
+  shotCooldown.fire = 0;
+  attackLatch.freeze = false;
+  attackLatch.fire = false;
   shakeMag = 0;
   shakeDur = 0;
   runDeaths = 0;
@@ -150,7 +164,6 @@ const player = {
   hitFlash:    0,
   form:        'small',
   canBreakBricks: false,
-  freezeTouch: false,
 };
 
 function setPlayerForm(form) {
@@ -186,7 +199,9 @@ function respawn() {
   player.vy   = 0;
   player.grounded = false;
   player.hitFlash = 40;
-  player.freezeTouch = false;
+  projectiles.length = 0;
+  shotCooldown.freeze = 0;
+  shotCooldown.fire = 0;
 }
 
 // ─── Goal state ───────────────────────────────────────────────────────────────
@@ -275,6 +290,137 @@ function addShake(mag, dur) {
   if (mag > shakeMag) { shakeMag = mag; shakeDur = dur; }
 }
 
+function projectilePalette(type) {
+  return type === 'freeze'
+    ? ['#66e0ff', '#d7fbff', '#9feaff']
+    : ['#ff7722', '#ffd29a', '#ffbb55'];
+}
+
+function tryShoot(type) {
+  if (pw[type] <= 0 || shotCooldown[type] > 0) return false;
+  const dir = player.facing || 1;
+  const muzzleX = player.x + player.w / 2 + dir * (player.w * 0.45);
+  const muzzleY = player.y + player.h * 0.38;
+  projectiles.push({
+    type,
+    x: muzzleX,
+    y: muzzleY,
+    vx: dir * SHOT_SPEED,
+    life: SHOT_LIFE,
+    radius: type === 'freeze' ? 5 : 6,
+  });
+  shotCooldown[type] = SHOT_COOLDOWN;
+  spawnBurst(muzzleX, muzzleY, 5, projectilePalette(type), 0.5, 1.5);
+  return true;
+}
+
+function projectileHitsSolid(projectile) {
+  const leftCol = pixToCol(projectile.x - projectile.radius);
+  const rightCol = pixToCol(projectile.x + projectile.radius);
+  const topRow = pixToRow(projectile.y - projectile.radius);
+  const bottomRow = pixToRow(projectile.y + projectile.radius);
+  return isSolid(leftCol, topRow) ||
+         isSolid(rightCol, topRow) ||
+         isSolid(leftCol, bottomRow) ||
+         isSolid(rightCol, bottomRow);
+}
+
+function applyProjectileHit(projectile, enemy) {
+  if (typeof enemy.hitByProjectile !== 'function') return false;
+  const result = enemy.hitByProjectile(projectile.type);
+  if (!result) return false;
+
+  const hitX = enemy.x + enemy.w / 2;
+  const hitY = enemy.y + enemy.h / 2;
+  if (result === 'freeze') {
+    spawnBurst(hitX, hitY, 16, ['#66e0ff', '#d7fbff', '#b7f3ff'], 0.8, 2.5);
+    addFloatingText(hitX, hitY - 6, 'FROZEN', '#9feaff');
+    addShake(2, 8);
+  } else if (result === 'burn') {
+    spawnBurst(hitX, hitY, 18, ['#ff7722', '#ffd29a', '#ffbb55'], 0.9, 2.8);
+    addFloatingText(hitX, hitY - 6, 'PURGED', '#ffd29a');
+    addShake(4, 10);
+  }
+  sfxCollect();
+  return true;
+}
+
+function updateProjectiles() {
+  if (shotCooldown.freeze > 0) shotCooldown.freeze--;
+  if (shotCooldown.fire > 0) shotCooldown.fire--;
+
+  for (let i = projectiles.length - 1; i >= 0; i--) {
+    const projectile = projectiles[i];
+    projectile.x += projectile.vx;
+    projectile.life--;
+
+    if (projectile.life % 2 === 0) {
+      particles.push({
+        x: projectile.x,
+        y: projectile.y,
+        vx: -projectile.vx * 0.08 + (Math.random() - 0.5) * 0.3,
+        vy: (Math.random() - 0.5) * 0.4,
+        life: 10,
+        maxLife: 10,
+        color: projectilePalette(projectile.type)[Math.floor(Math.random() * 3)],
+        size: 2,
+      });
+    }
+
+    if (projectileHitsSolid(projectile)) {
+      spawnBurst(projectile.x, projectile.y, 10, projectilePalette(projectile.type), 0.5, 1.8);
+      projectiles.splice(i, 1);
+      continue;
+    }
+
+    let hitEnemy = false;
+    for (const enemy of entities.enemies) {
+      if (enemy.dead) continue;
+      const overlapX = projectile.x + projectile.radius > enemy.x && projectile.x - projectile.radius < enemy.x + enemy.w;
+      const overlapY = projectile.y + projectile.radius > enemy.y && projectile.y - projectile.radius < enemy.y + enemy.h;
+      if (!overlapX || !overlapY) continue;
+      if (applyProjectileHit(projectile, enemy)) {
+        projectiles.splice(i, 1);
+        hitEnemy = true;
+        break;
+      }
+    }
+    if (hitEnemy) continue;
+
+    if (projectile.life <= 0) projectiles.splice(i, 1);
+  }
+}
+
+function drawProjectiles(camX) {
+  for (const projectile of projectiles) {
+    const sx = Math.round(projectile.x - camX);
+    const sy = Math.round(projectile.y);
+    if (projectile.type === 'freeze') {
+      ctx.fillStyle = 'rgba(135, 235, 255, 0.4)';
+      ctx.beginPath();
+      ctx.arc(sx, sy, projectile.radius + 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#d7fbff';
+      ctx.beginPath();
+      ctx.arc(sx, sy, projectile.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#66e0ff';
+      ctx.fillRect(sx - 2, sy - 2, 4, 4);
+    } else {
+      ctx.fillStyle = 'rgba(255, 140, 0, 0.35)';
+      ctx.beginPath();
+      ctx.arc(sx, sy, projectile.radius + 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ffbb55';
+      ctx.beginPath();
+      ctx.arc(sx, sy, projectile.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ff5500';
+      ctx.fillRect(sx - 2, sy - 4, 4, 8);
+    }
+  }
+}
+
 // ─── Update ───────────────────────────────────────────────────────────────────
 function update() {
   if (levelComplete || gameState !== 'playing') return;
@@ -292,8 +438,8 @@ function update() {
   if (pw.speed      > 0)   pw.speed--;
   if (pw.doublejump > 0)   pw.doublejump--;
   if (pw.freeze     > 0)   pw.freeze--;
+  if (pw.fire       > 0)   pw.fire--;
   if (rtoFrames > 0) rtoFrames--;
-  player.freezeTouch = pw.freeze > 0;
 
   // Horizontal input
   const speedMult = pw.speed > 0 ? 1.7 : 1.0;
@@ -302,10 +448,20 @@ function update() {
   const runHeld = isRunHeld();
   const accel = (runHeld ? RUN_SPEED : MOVE_SPEED) * speedMult;
   const maxVx = (runHeld ? RUN_MAX_VX : WALK_MAX_VX) * speedMult;
-  const friction = (!goLeft && !goRight) ? (runHeld ? RUN_FRICTION : FRICTION) : 1;
   if (goLeft)  { player.vx -= accel; player.facing = -1; }
   if (goRight) { player.vx += accel; player.facing =  1; }
-  player.vx *= friction;
+  if (player.grounded) {
+    if (goLeft && player.vx > 0) player.vx *= TURN_BRAKE;
+    if (goRight && player.vx < 0) player.vx *= TURN_BRAKE;
+  }
+  if (!goLeft && !goRight) {
+    if (player.grounded) {
+      player.vx *= runHeld ? RUN_GROUND_BRAKE : GROUND_BRAKE;
+      if (Math.abs(player.vx) < STOP_EPSILON) player.vx = 0;
+    } else {
+      player.vx *= AIR_DRAG;
+    }
+  }
   if (player.vx > maxVx) player.vx = maxVx;
   if (player.vx < -maxVx) player.vx = -maxVx;
 
@@ -331,6 +487,13 @@ function update() {
   else if (player.coyoteTimer > 0)  player.coyoteTimer--;
 
   if (player.grounded) doubleJumpUsed = false;
+
+  const freezeShotHeld = !!keys['AltLeft'];
+  const fireShotHeld = !!keys['AltRight'];
+  if (freezeShotHeld && !attackLatch.freeze) tryShoot('freeze');
+  if (fireShotHeld && !attackLatch.fire) tryShoot('fire');
+  attackLatch.freeze = freezeShotHeld;
+  attackLatch.fire = fireShotHeld;
 
   if (player.jumpBuffer > 0 && player.coyoteTimer > 0) {
     player.vy          = JUMP_FORCE;
@@ -370,6 +533,8 @@ function update() {
   // Land detection
   if (player.grounded && !player.wasGrounded) sfxLand();
   player.wasGrounded = player.grounded;
+
+  updateProjectiles();
 
   // Fell into pit
   if (player.y > world.rows * TILE_SIZE + 60) loseLife();
@@ -413,6 +578,7 @@ function update() {
           doublejump: ['#00ddff', '#aaffff', '#3cf2ff'],
           grow: ['#55cc55', '#c7ffb8', '#ffffff'],
           freeze: ['#66e0ff', '#d7fbff', '#9de9ff'],
+          fire: ['#ff7722', '#ffd29a', '#ffbb55'],
           life: ['#ff4455', '#ff8899', '#ffd0d6'],
         };
         const labelsByType = {
@@ -421,17 +587,12 @@ function update() {
           doublejump: 'SN^2',
           grow: 'UP',
           freeze: 'STUN',
+          fire: 'FIRE',
           life: '+1',
         };
         spawnBurst(x, y, 18, colorsByType[type] || ['#ffffff'], 0.8, 2.8);
         addFloatingText(x, y - 10, labelsByType[type] || type.toUpperCase(), '#ffffff');
         addShake(3, 10);
-        sfxCollect();
-      },
-      (x, y) => {
-        spawnBurst(x, y, 16, ['#66e0ff', '#d7fbff', '#b7f3ff'], 0.8, 2.5);
-        addFloatingText(x, y - 6, 'SNAP STUN', '#9feaff');
-        addShake(2, 8);
         sfxCollect();
       }
     );
@@ -692,6 +853,7 @@ function drawHUD() {
     { key: 'speed',      label: 'TR',  color: '#ffcc00', max: PW_DURATION.speed      },
     { key: 'doublejump', label: 'SN²', color: '#00ddff', max: PW_DURATION.doublejump },
     { key: 'freeze',     label: 'STN', color: '#66e0ff', max: PW_DURATION.freeze     },
+    { key: 'fire',       label: 'FIR', color: '#ff7722', max: PW_DURATION.fire       },
   ].filter(p => pw[p.key] > 0);
 
   activePws.forEach((p, i) => {
@@ -723,10 +885,22 @@ function drawHUD() {
     ctx.fillText('▲▲', W / 2 - 12, 52);
   }
 
+  let infoY = 50 + activePws.length * 18;
   if (player.form === 'big') {
     ctx.fillStyle = '#aaffaa';
     ctx.font      = 'bold 10px monospace';
-    ctx.fillText('UP FORM // BREAK BRICKS', 10, 50 + activePws.length * 18);
+    ctx.fillText('UP FORM // BREAK BRICKS', 10, infoY);
+    infoY += 16;
+  }
+
+  const shotHints = [];
+  if (pw.freeze > 0) shotHints.push({ label: 'L-ALT ICE SHOT', color: '#9feaff' });
+  if (pw.fire > 0) shotHints.push({ label: 'R-ALT FIRE SHOT', color: '#ffd29a' });
+  for (const hint of shotHints) {
+    ctx.fillStyle = hint.color;
+    ctx.font      = 'bold 9px monospace';
+    ctx.fillText(hint.label, 10, infoY);
+    infoY += 14;
   }
 
   // Bottom debug bar
@@ -740,7 +914,7 @@ function drawHUD() {
   );
   ctx.fillStyle = '#2a3a2a';
   ctx.textAlign = 'right';
-  ctx.fillText('Shift / Run + Jump for long arcs', W - 8, H - 6);
+  ctx.fillText('Shift run // Alt-L ice // Alt-R fire', W - 8, H - 6);
   ctx.textAlign = 'left';
 }
 
@@ -1274,7 +1448,7 @@ function drawPause() {
   ctx.fillRect(0, 0, W, H);
 
   const cx = W / 2, cy = H / 2;
-  const pw = 340, ph = 200;
+  const pw = 340, ph = 224;
 
   ctx.fillStyle = 'rgba(0,10,0,0.95)';
   ctx.fillRect(cx - pw/2, cy - ph/2, pw, ph);
@@ -1293,14 +1467,16 @@ function drawPause() {
 
   ctx.fillStyle = '#2a8a2a';
   ctx.font      = '12px monospace';
-  ctx.fillText('ESC  —  RESUME', cx, cy - 10);
-  ctx.fillText('R    —  RESTART LEVEL', cx, cy + 14);
-  ctx.fillText('SHIFT —  RUN / LONG JUMP', cx, cy + 38);
+  ctx.fillText('ESC   —  RESUME', cx, cy - 24);
+  ctx.fillText('R     —  RESTART LEVEL', cx, cy);
+  ctx.fillText('SHIFT —  RUN / LONG JUMP', cx, cy + 24);
+  ctx.fillText('L-ALT —  ICE SHOT', cx, cy + 48);
+  ctx.fillText('R-ALT —  FIRE SHOT', cx, cy + 72);
 
   ctx.fillStyle = '#1a5a1a';
   ctx.font      = '10px monospace';
-  ctx.fillText(`LIVES: ${lives} / ${MAX_LIVES}   SNAPSHOTS: ${entities.orbsCollected} / ${entities.totalOrbs}`, cx, cy + 74);
-  ctx.fillText(world.name, cx, cy + 90);
+  ctx.fillText(`LIVES: ${lives} / ${MAX_LIVES}   SNAPSHOTS: ${entities.orbsCollected} / ${entities.totalOrbs}`, cx, cy + 104);
+  ctx.fillText(world.name, cx, cy + 120);
 
   ctx.textAlign = 'left';
   drawScanlines();
@@ -1384,10 +1560,12 @@ function saveBestScore() {
 const touchBtns = {
   left:  { x: 50,     y: H - 75, r: 36 },
   right: { x: 138,    y: H - 75, r: 36 },
+  ice:   { x: W - 168, y: H - 132, r: 26 },
+  fire:  { x: W - 96,  y: H - 132, r: 26 },
   run:   { x: W - 158, y: H - 75, r: 34 },
   jump:  { x: W - 70, y: H - 75, r: 44 },
 };
-const touchState = { left: false, right: false, run: false, jump: false };
+const touchState = { left: false, right: false, run: false, jump: false, ice: false, fire: false };
 
 function touchInBtn(tx, ty, btn) {
   const dx = tx - btn.x, dy = ty - btn.y;
@@ -1399,6 +1577,8 @@ function syncTouchToKeys() {
   keys['ArrowRight'] = touchState.right;
   keys['ShiftLeft']  = touchState.run;
   keys['Space']      = touchState.jump;
+  keys['AltLeft']    = touchState.ice;
+  keys['AltRight']   = touchState.fire;
 }
 
 function evalTouches(e) {
@@ -1406,6 +1586,8 @@ function evalTouches(e) {
   touchState.right = false;
   touchState.run   = false;
   touchState.jump  = false;
+  touchState.ice   = false;
+  touchState.fire  = false;
   const rect = canvas.getBoundingClientRect();
   const scaleX = W / rect.width;
   const scaleY = H / rect.height;
@@ -1414,6 +1596,8 @@ function evalTouches(e) {
     const ty = (t.clientY - rect.top)  * scaleY;
     if (touchInBtn(tx, ty, touchBtns.left))  touchState.left  = true;
     if (touchInBtn(tx, ty, touchBtns.right)) touchState.right = true;
+    if (touchInBtn(tx, ty, touchBtns.ice))   touchState.ice   = true;
+    if (touchInBtn(tx, ty, touchBtns.fire))  touchState.fire  = true;
     if (touchInBtn(tx, ty, touchBtns.run))   touchState.run   = true;
     if (touchInBtn(tx, ty, touchBtns.jump))  touchState.jump  = true;
   }
@@ -1432,6 +1616,8 @@ function drawTouchControls() {
   const btns = [
     { ...touchBtns.left,  label: '◀', active: touchState.left  },
     { ...touchBtns.right, label: '▶', active: touchState.right },
+    { ...touchBtns.ice,   label: 'ICE', active: touchState.ice },
+    { ...touchBtns.fire,  label: 'FIR', active: touchState.fire },
     { ...touchBtns.run,   label: 'RUN', active: touchState.run },
     { ...touchBtns.jump,  label: '▲', active: touchState.jump  },
   ];
@@ -1446,7 +1632,7 @@ function drawTouchControls() {
     ctx.stroke();
     ctx.globalAlpha = b.active ? 1 : 0.6;
     ctx.fillStyle   = '#ffffff';
-    ctx.font        = b.label === 'RUN' ? 'bold 12px monospace' : `bold ${b.r - 10}px monospace`;
+    ctx.font        = ['RUN', 'ICE', 'FIR'].includes(b.label) ? 'bold 12px monospace' : `bold ${b.r - 10}px monospace`;
     ctx.textAlign   = 'center';
     ctx.fillText(b.label, b.x, b.y + (b.r - 10) * 0.35);
   }
@@ -1470,6 +1656,7 @@ function loop() {
     }
     drawWorld(ctx, cam.x);
     entities.draw(ctx, cam.x);
+    drawProjectiles(cam.x);
     drawParticles(cam.x);
     drawPlayer();
     drawFloatingTexts(cam.x);

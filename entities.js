@@ -143,6 +143,20 @@ class RoguePacket {
     this.frozen = 240;
   }
 
+  hitByProjectile(type) {
+    if (this.dead) return null;
+    if (type === 'freeze') {
+      if (this.frozen > 0) return null;
+      this.freeze();
+      return 'freeze';
+    }
+    if (type === 'fire') {
+      this.stomp();
+      return 'burn';
+    }
+    return null;
+  }
+
   stomp() {
     this.dead        = true;
     this.squashTick  = 22;
@@ -272,6 +286,20 @@ class CryptoProcess {
     this.frozen = 240;
   }
 
+  hitByProjectile(type) {
+    if (this.dead) return null;
+    if (type === 'freeze') {
+      if (this.frozen > 0) return null;
+      this.freeze();
+      return 'freeze';
+    }
+    if (type === 'fire') {
+      this.stomp();
+      return 'burn';
+    }
+    return null;
+  }
+
   stomp() {
     this.dead = true;
     this.popTick = 18;
@@ -321,6 +349,7 @@ const POWERUP_DEFS = {
   doublejump: { color: '#00ddff', inner: '#aaffff', label: 'SN²', desc: 'SNAP CHAIN'   },
   grow:       { color: '#55cc55', inner: '#c7ffb8', label: 'UP',  desc: 'SCALE UP'      },
   freeze:     { color: '#66e0ff', inner: '#e6fcff', label: 'STN', desc: 'SNAP STUN'     },
+  fire:       { color: '#ff7722', inner: '#ffd29a', label: 'FIR', desc: 'PURGE BURST'   },
   life:       { color: '#ff4455', inner: '#ffaaaa', label: '+1',  desc: 'EXTRA REPLICA' },
 };
 
@@ -447,7 +476,7 @@ const entities = {
     }
   },
 
-  update(player, onHit, onStomp, onPowerup, onFreeze) {
+  update(player, onHit, onStomp, onPowerup) {
     for (const orb of this.orbs) {
       orb.update();
       if (orb.overlaps(player)) {
@@ -463,12 +492,7 @@ const entities = {
         enemy.stomp();
         onStomp(enemy.x + enemy.w / 2, enemy.y);
       } else if (result === 'hit') {
-        if (player.freezeTouch && typeof enemy.freeze === 'function' && enemy.frozen <= 0) {
-          enemy.freeze();
-          onFreeze(enemy.x + enemy.w / 2, enemy.y + enemy.h / 2);
-        } else {
-          onHit();
-        }
+        onHit();
       }
     }
     for (const pw of this.powerups) {

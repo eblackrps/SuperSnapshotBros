@@ -168,11 +168,13 @@ const LEVELS = {
       { type: 'grow',       col:  19, row:  9 },  // introduces brick-breaking form
       { type: 'doublejump', col:  41, row:  5 },  // supports the first big climb
       { type: 'shield',     col:  67, row:  1 },  // calm before the midpoint descent
+      { type: 'fire',       col:  90, row:  5 },  // gives the descent a ranged cleanup option
       { type: 'freeze',     col: 112, row: 10 },  // service-bay crowd control
       { type: 'speed',      col: 112, row:  8 },  // bonus route lure
       { type: 'life',       col: 131, row:  4 },  // high-risk optional reward
       { type: 'grow',       col: 150, row:  8 },  // lets late-stage players crack brick stacks
       { type: 'doublejump', col: 148, row:  5 },  // helps the late staircase recover
+      { type: 'fire',       col: 160, row:  3 },  // late-stage purge burst for the vault climb
       { type: 'freeze',     col: 170, row: 10 },  // final crowd-control refresh
       { type: 'shield',     col: 169, row:  2 },  // final vault approach buffer
     ],
