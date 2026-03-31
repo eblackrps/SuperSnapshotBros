@@ -26,6 +26,8 @@ GitHub Pages: [https://eblackrps.github.io/SuperSnapshotBros/](https://eblackrps
 | `W` / `↑` / `Space` | Jump |
 | `Left Alt` | Fire cold shot when `STN` is active |
 | `Right Alt` | Fire purge burst when `FIR` is active |
+| `H` | Toggle full / compact HUD |
+| `F3` | Toggle telemetry overlay |
 | `Esc` | Pause / Resume |
 | `R` (paused) | Restart level |
 | `M` | Mute / Unmute |
@@ -41,7 +43,7 @@ Touch controls are displayed automatically on mobile devices.
 | **Snapshot Orbs** | Recovery artifacts — checkpoint-marked orbs set your respawn point |
 | **Golden Backup** | The recovery target — reach it to complete the level |
 | **RTO Timer** | Recovery Time Objective — if it hits zero, the recovery window is lost |
-| **Lives (▣▣▣)** | Replication count — your redundancy budget before the run fails |
+| **Lives** | Replication count — your redundancy budget before the run fails |
 | **Rogue Packets** | Corrupt network traffic causing outage events |
 | **HA Powerup** | High Availability — temporary invincibility |
 | **TR Powerup** | Turbo Replication — movement speed boost |
@@ -50,11 +52,15 @@ Touch controls are displayed automatically on mobile devices.
 | **SYNC Lift** | Replication rails — moving recovery platforms |
 | **EMP Field** | Control-plane interference — temporarily disrupts jump and shots |
 | **Immutable Backup** | One safe corruption bypass before the next restore risk |
+| **Rollback Snapshot** | One automatic restore to the last checkpoint without losing a life |
 | **Corruption Field** | Unsafe restore zone — costs a life unless protected |
 | **+1 Powerup** | Extra Replica — bonus life |
 | **World 1-1** | *Hypervisor Crash* — the inciting incident |
 | **World 1-2** | *Replication Lag* — sync lifts and EMP pressure |
 | **World 1-3** | *Immutable Backup* — corruption routing and hardened recovery |
+| **World 1-4** | *Failover Spine* — mirrored routes and fallback transfers |
+| **World 1-5** | *Snapshot Bastion* — vault routes and the first mini-boss |
+| **Ransomware Warden** | DR mini-boss guarding the final vault in `1-5` |
 
 ---
 
@@ -67,6 +73,7 @@ Touch controls are displayed automatically on mobile devices.
 | Cyan diamond | `SN²` | Double jump | 8 seconds |
 | Green diamond | `UP` | Grow larger, survive one hit, break bricks | Until hit / death |
 | Mint diamond | `IMM` | Grants one safe corruption pass | Until used |
+| Aqua diamond | `RBK` | Auto-restore to the last checkpoint instead of losing a life | Until used |
 | Ice diamond | `STN` | Enables ice shots on `Left Alt` that freeze enemies | 7 seconds |
 | Orange diamond | `FIR` | Enables fire shots on `Right Alt` that purge enemies | 7 seconds |
 | Red diamond | `+1` | Extra life (instant) | — |
@@ -84,6 +91,9 @@ Touch controls are displayed automatically on mobile devices.
 - **Sync lifts** — moving platforms now preview the traversal style for later World 1 levels
 - **EMP fields** — hazard zones can briefly jam jump and ranged powers without insta-killing the run
 - **Immutable Backup** — `IMM` lets you survive one corruption field contact and keeps `1-3` mechanical, not just visual
+- **Rollback Snapshot** — `RBK` auto-restores you to the last checkpoint without burning a life
+- **Mini-boss finale** — `1-5` ends with the Ransomware Warden and a boss health bar
+- **Enhanced HUD** — redundancy bar, run snapshot counts, boss bar, compact mode, and optional telemetry overlay
 - **Enemy stomp** — land on Rogue Packets to squash them; chain stomps for a bounce
 - **Squash & stretch** — enemies flatten with physics-accurate deformation on stomp
 - **Parallax background** — two-layer server rack scenery with animated LEDs
@@ -137,9 +147,8 @@ Six ascending platforms form the recovery path. The gap in the ground forces you
 See [`BUILD_PLAN.md`](BUILD_PLAN.md) for the full phase breakdown.
 
 Planned additions:
-- World 1-4, 1-5, 1-6, and 1-F (Failover Spine, Storage Failure, Datacenter Flood, Cloud Outage, Recovery Point)
+- World 1-6 and 1-F (Storage Failure, Datacenter Flood, Cloud Outage, Recovery Point)
 - World select map (network topology style)
-- Crypto Process enemy (sine-wave float pattern)
 - Rising Log Data mechanic (rising floor)
 - Web-font pixel art title logo
 

@@ -32,8 +32,8 @@ const SHOT_COOLDOWN = 14;
 let gameState = 'title';
 
 let transitionFlash = 0;
-let lives           = 3;
-const MAX_LIVES     = 3;
+let lives           = 6;
+const MAX_LIVES     = 6;
 
 // Checkpoint
 let checkpoint = null;
@@ -44,6 +44,7 @@ let doubleJumpUsed = false;
 let empFrames = 0;
 let immutableCharge = 0;
 let corruptionGraceFrames = 0;
+let rollbackCharge = 0;
 
 const PW_DURATION = { shield: 360, speed: 360, doublejump: 480, freeze: 420, fire: 420 };  // 6s / 6s / 8s / 7s / 7s
 const EMP_DURATION = 14;
@@ -57,7 +58,8 @@ let rtoMaxFrames = DEFAULT_RTO_FRAMES;
 let rtoFrames = rtoMaxFrames;
 let gameOverCause = 'lives';
 const SITE_URL = 'https://anystackarchitect.com';
-const LEVEL_SEQUENCE = ['1-1', '1-2', '1-3'];
+const GAME_VERSION = 'v1.2.1';
+const LEVEL_SEQUENCE = ['1-1', '1-2', '1-3', '1-4', '1-5'];
 let currentLevelIndex = 0;
 let currentLevelId = LEVEL_SEQUENCE[0];
 let runDeaths = 0;
@@ -67,6 +69,9 @@ let bankedOrbsCollected = 0;
 let bankedOrbsTotal = 0;
 let bankedCheckpointOrbs = 0;
 let levelBannerFrames = 0;
+let goalLockNoticeFrames = 0;
+let hudMode = 'compact';
+let showTelemetry = false;
 
 function resetTransientState() {
   pw.shield = pw.speed = pw.doublejump = pw.freeze = pw.fire = 0;
@@ -74,6 +79,7 @@ function resetTransientState() {
   empFrames = 0;
   immutableCharge = 0;
   corruptionGraceFrames = 0;
+  rollbackCharge = 0;
   projectiles.length = 0;
   shotCooldown.freeze = 0;
   shotCooldown.fire = 0;
@@ -90,6 +96,7 @@ function loadRunLevel(levelId, { resetCheckpoint = true, preserveForm = false } 
   floatingTexts.length = 0;
   shakeMag = 0;
   shakeDur = 0;
+  goalLockNoticeFrames = 0;
   loadLevel(levelId);
   rtoMaxFrames  = getLevelRtoFrames(world);
   rtoFrames     = rtoMaxFrames;
@@ -148,6 +155,14 @@ function startGame() {
 }
 
 function loseLife() {
+  if (rollbackCharge > 0 && gameState === 'playing') {
+    rollbackCharge = 0;
+    spawnBurst(player.x + player.w / 2, player.y + player.h / 2, 20, ['#00f5c0', '#dffef7', '#00ddff'], 0.8, 2.7);
+    addFloatingText(player.x + player.w / 2, player.y - 10, 'ROLLBACK RESTORE', '#b9fff4');
+    addShake(5, 14);
+    respawn(player.form === 'big');
+    return;
+  }
   sfxDeath();
   runDeaths++;
   lives--;
@@ -166,6 +181,14 @@ const keys = {};
 document.addEventListener('keydown', e => {
   keys[e.code] = true;
   e.preventDefault();
+  if (e.code === 'KeyH') {
+    hudMode = hudMode === 'full' ? 'compact' : 'full';
+    return;
+  }
+  if (e.code === 'F3') {
+    showTelemetry = !showTelemetry;
+    return;
+  }
   if (gameState === 'title')    { startGame(); return; }
   if (gameState === 'complete') {
     if (e.code === 'Enter' || e.code === 'KeyL') {
@@ -203,6 +226,10 @@ function getCurrentSectionName() {
     if (playerCol >= section.startCol && playerCol <= section.endCol) return section.label;
   }
   return world.sections[world.sections.length - 1]?.label || '';
+}
+
+function getActiveBoss() {
+  return entities.enemies.find(enemy => enemy.isBoss && !enemy.dead) || null;
 }
 
 // ─── Player ───────────────────────────────────────────────────────────────────
@@ -257,20 +284,43 @@ function respawn(preserveForm = false) {
   player.vx   = 0;
   player.vy   = 0;
   player.grounded = false;
+  player.wasGrounded = false;
+  player.coyoteTimer = 0;
+  player.jumpBuffer = 0;
+  player.jumping = false;
+  player.walkTick = 0;
   player.hitFlash = 40;
   player.platformId = null;
+  pw.shield = pw.speed = pw.doublejump = pw.freeze = pw.fire = 0;
+  doubleJumpUsed = false;
   empFrames = 0;
   immutableCharge = 0;
   corruptionGraceFrames = 0;
+  rollbackCharge = 0;
+  goalLockNoticeFrames = 0;
   projectiles.length = 0;
   shotCooldown.freeze = 0;
   shotCooldown.fire = 0;
+  attackLatch.freeze = false;
+  attackLatch.fire = false;
 }
 
 // ─── Goal state ───────────────────────────────────────────────────────────────
 let levelComplete = false;
 
 function checkGoal() {
+  const boss = getActiveBoss();
+  if (world?.requiresBossDefeat && boss) return false;
+  const g  = world.goal;
+  const gx = g.col * TILE_SIZE + 6;
+  const gy = g.row * TILE_SIZE;
+  return player.x + player.w > gx &&
+         player.x < gx + 20        &&
+         player.y + player.h > gy  &&
+         player.y < gy + 28;
+}
+
+function isTouchingGoal() {
   const g  = world.goal;
   const gx = g.col * TILE_SIZE + 6;
   const gy = g.row * TILE_SIZE;
@@ -399,10 +449,22 @@ function applyProjectileHit(projectile, enemy) {
     spawnBurst(hitX, hitY, 16, ['#66e0ff', '#d7fbff', '#b7f3ff'], 0.8, 2.5);
     addFloatingText(hitX, hitY - 6, 'FROZEN', '#9feaff');
     addShake(2, 8);
+  } else if (result === 'boss-freeze') {
+    spawnBurst(hitX, hitY, 18, ['#66e0ff', '#d7fbff', '#b7f3ff'], 0.8, 2.8);
+    addFloatingText(hitX, hitY - 6, 'WARDEN LOCKED', '#bdf3ff');
+    addShake(3, 9);
   } else if (result === 'burn') {
     spawnBurst(hitX, hitY, 18, ['#ff7722', '#ffd29a', '#ffbb55'], 0.9, 2.8);
     addFloatingText(hitX, hitY - 6, 'PURGED', '#ffd29a');
     addShake(4, 10);
+  } else if (result === 'boss-hit') {
+    spawnBurst(hitX, hitY, 20, ['#ff8899', '#ffd9df', '#ffcc66'], 0.9, 3.0);
+    addFloatingText(hitX, hitY - 6, 'SNAP HIT', '#ffd7df');
+    addShake(5, 12);
+  } else if (result === 'boss-kill') {
+    spawnBurst(hitX, hitY, 28, ['#55ff99', '#dffff0', '#ffd27a'], 1.0, 3.5);
+    addFloatingText(hitX, hitY - 6, 'WARDEN PURGED', '#c6ffe0');
+    addShake(8, 16);
   }
   sfxCollect();
   return true;
@@ -567,6 +629,7 @@ function update() {
   if (pw.fire       > 0)   pw.fire--;
   if (empFrames     > 0)   empFrames--;
   if (corruptionGraceFrames > 0) corruptionGraceFrames--;
+  if (goalLockNoticeFrames > 0) goalLockNoticeFrames--;
   if (rtoFrames > 0) rtoFrames--;
 
   updatePlatforms();
@@ -672,6 +735,12 @@ function update() {
     player.brokenTiles = null;
   }
 
+  if (player.bumpedBreakable) {
+    addFloatingText(player.x + player.w / 2, player.y - 8, 'UP FORM NEEDED', '#c8ffb5');
+    addShake(2, 6);
+    player.bumpedBreakable = false;
+  }
+
   // Land detection
   if (player.grounded && !player.wasGrounded) sfxLand();
   player.wasGrounded = player.grounded;
@@ -679,14 +748,17 @@ function update() {
   updateProjectiles();
 
   // Fell into pit
-  if (player.y > world.rows * TILE_SIZE + 60) loseLife();
+  if (player.y > world.rows * TILE_SIZE + 60) {
+    loseLife();
+    return;
+  }
 
   // Camera
   updateCamera(player);
 
   // Entities
   if (player.hitFlash === 0) {
-    entities.update(
+    const entityResult = entities.update(
       player,
       () => {
         if (player.hitFlash === 0 && pw.shield === 0) {
@@ -694,16 +766,31 @@ function update() {
           if (player.form === 'big') {
             shrinkPlayer();
             addFloatingText(player.x + player.w / 2, player.y - 8, 'DOWNGRADE', '#aaffaa');
+            return 'continue';
           } else {
             loseLife();
+            return 'abort';
           }
         }
+        return 'continue';
       },
-      (x, y) => {
+      (x, y, stompResult, enemy) => {
         player.vy = JUMP_FORCE * 0.75;
-        spawnBurst(x, y, 16, ['#ff8800', '#ff4400', '#ffaa33'], 1.2, 3.4);
-        addFloatingText(x, y - 8, 'STOMP', '#ffcc66');
-        addShake(5, 12);
+        if (enemy?.isBoss) {
+          if (stompResult === 'boss-kill') {
+            spawnBurst(x, y, 30, ['#55ff99', '#dffff0', '#ffd27a'], 1.1, 3.8);
+            addFloatingText(x, y - 8, 'WARDEN DOWN', '#c8ffe3');
+            addShake(9, 18);
+          } else {
+            spawnBurst(x, y, 22, ['#ff8899', '#ffd9df', '#ffcc66'], 0.9, 3.0);
+            addFloatingText(x, y - 8, 'SNAP BREAK', '#ffd7df');
+            addShake(6, 14);
+          }
+        } else {
+          spawnBurst(x, y, 16, ['#ff8800', '#ff4400', '#ffaa33'], 1.2, 3.4);
+          addFloatingText(x, y - 8, 'STOMP', '#ffcc66');
+          addShake(5, 12);
+        }
         sfxStomp();
       },
       (type, x, y) => {
@@ -711,6 +798,8 @@ function update() {
           lives = Math.min(MAX_LIVES + 1, lives + 1);
         } else if (type === 'immutable') {
           immutableCharge = 1;
+        } else if (type === 'rollback') {
+          rollbackCharge = 1;
         } else if (type === 'grow') {
           growPlayer();
         } else {
@@ -722,6 +811,7 @@ function update() {
           doublejump: ['#00ddff', '#aaffff', '#3cf2ff'],
           grow: ['#55cc55', '#c7ffb8', '#ffffff'],
           immutable: ['#55cc77', '#dfffe5', '#a6f0b5'],
+          rollback: ['#00f5c0', '#dffef7', '#88ffe4'],
           freeze: ['#66e0ff', '#d7fbff', '#9de9ff'],
           fire: ['#ff7722', '#ffd29a', '#ffbb55'],
           life: ['#ff4455', '#ff8899', '#ffd0d6'],
@@ -732,6 +822,7 @@ function update() {
           doublejump: 'SN^2',
           grow: 'UP',
           immutable: 'IMM',
+          rollback: 'RBK',
           freeze: 'STUN',
           fire: 'FIRE',
           life: '+1',
@@ -742,6 +833,7 @@ function update() {
         sfxCollect();
       }
     );
+    if (entityResult === 'abort') return;
   }
 
   // Snapshot orbs — some are checkpoints, others are score-only collectibles
@@ -774,7 +866,14 @@ function update() {
   }
 
   // Goal
-  if (checkGoal()) {
+  const touchingGoal = isTouchingGoal();
+  if (touchingGoal && world?.requiresBossDefeat && getActiveBoss()) {
+    if (goalLockNoticeFrames === 0) {
+      addFloatingText(player.x + player.w / 2, player.y - 10, 'PURGE THE WARDEN', '#ff99aa');
+      addShake(3, 8);
+      goalLockNoticeFrames = 45;
+    }
+  } else if (checkGoal()) {
     sfxGoal();
     if (currentLevelIndex < LEVEL_SEQUENCE.length - 1) {
       advanceToNextLevel();
@@ -953,49 +1052,102 @@ function drawPlayer() {
 
 // ─── HUD ──────────────────────────────────────────────────────────────────────
 function drawHUD() {
-  // Top bar background
-  ctx.fillStyle = 'rgba(0,0,0,0.6)';
-  ctx.fillRect(0, 0, W, 38);
+  const compact = hudMode === 'compact';
+  const topH = compact ? 68 : 88;
+  const sectionName = getCurrentSectionName();
+  const totalCollectedRun = bankedOrbsCollected + entities.orbsCollected;
+  const totalRunOrbs = bankedOrbsTotal + entities.totalOrbs;
+  const activeBoss = getActiveBoss();
 
-  // Title
+  ctx.fillStyle = 'rgba(0, 6, 0, 0.78)';
+  ctx.fillRect(0, 0, W, topH);
+  ctx.fillStyle = 'rgba(0, 255, 90, 0.08)';
+  ctx.fillRect(0, topH - 2, W, 2);
+
   ctx.fillStyle = '#00ff41';
   ctx.font = 'bold 13px monospace';
   ctx.fillText('SUPER SNAPSHOT BROS', 10, 16);
 
-  // Level name
-  ctx.fillStyle = '#3a8a3a';
+  ctx.fillStyle = '#5ab85a';
   ctx.font = '10px monospace';
-  const sectionName = getCurrentSectionName();
-  ctx.fillText(sectionName ? `${world.name}  //  ${sectionName}` : world.name, 10, 30);
-  ctx.textAlign = 'right';
-  ctx.fillStyle = '#4aa84a';
-  ctx.font = '9px monospace';
-  ctx.fillText(`STAGE ${Math.min(currentLevelIndex + 1, LEVEL_SEQUENCE.length)} / ${LEVEL_SEQUENCE.length}`, W - 10, 62);
-  ctx.textAlign = 'left';
-
-  // Lives (top right)
-  ctx.textAlign = 'right';
-  ctx.font      = 'bold 13px monospace';
-  for (let i = 0; i < MAX_LIVES; i++) {
-    ctx.fillStyle = i < lives ? '#00aaee' : '#1a3a1a';
-    ctx.fillText('▣', W - 12 - i * 18, 20);
+  ctx.fillText(world.name, 10, 30);
+  if (!compact && sectionName) {
+    ctx.fillStyle = '#3f8f62';
+    ctx.fillText(sectionName, 10, 44);
   }
 
-  // Orb counter (top right, second row)
+  // Life bar / redundancy budget
+  const baseLives = Math.max(0, Math.min(MAX_LIVES, lives));
+  const overflowLives = Math.max(0, lives - MAX_LIVES);
+  const lifeRatio = Math.max(0, Math.min(1, baseLives / MAX_LIVES));
+  const lifeX = 10;
+  const lifeY = compact ? 40 : 54;
+  const lifeW = 150;
+  const lifeH = 10;
+  ctx.fillStyle = '#1f4f1f';
+  ctx.font = '8px monospace';
+  ctx.fillText('REDUNDANCY', lifeX, lifeY - 3);
+  ctx.fillStyle = 'rgba(0,0,0,0.45)';
+  ctx.fillRect(lifeX, lifeY, lifeW, lifeH);
+  ctx.fillStyle = lifeRatio > 0.6 ? '#00dd88' : lifeRatio > 0.3 ? '#ffd84a' : '#ff6677';
+  ctx.fillRect(lifeX + 1, lifeY + 1, Math.max(0, Math.round((lifeW - 2) * lifeRatio)), lifeH - 2);
+  ctx.strokeStyle = 'rgba(160,255,200,0.2)';
+  ctx.strokeRect(lifeX, lifeY, lifeW, lifeH);
+  for (let i = 1; i < MAX_LIVES; i++) {
+    const sx = lifeX + Math.round((lifeW * i) / MAX_LIVES);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+    ctx.fillRect(sx, lifeY + 1, 1, lifeH - 2);
+  }
+  ctx.fillStyle = '#d8fff0';
+  ctx.font = 'bold 8px monospace';
+  ctx.fillText(`${baseLives} / ${MAX_LIVES}`, lifeX + lifeW + 8, lifeY + 8);
+  if (overflowLives > 0) {
+    ctx.fillStyle = '#ff8899';
+    ctx.fillText(`+${overflowLives}`, lifeX + lifeW + 48, lifeY + 8);
+  }
+
+  // Snapshot counters / run progress
+  ctx.fillStyle = '#77f1ff';
+  ctx.font = '9px monospace';
+  ctx.fillText(`SNAPSHOTS ${entities.orbsCollected}/${entities.totalOrbs}`, 10, compact ? 63 : 75);
+  if (!compact) {
+    ctx.fillStyle = '#43d2d9';
+    ctx.fillText(`RUN BANK ${totalCollectedRun}/${Math.max(1, totalRunOrbs)}`, 10, 88);
+  }
+
+  // Right-side summary
+  const totalSeconds = Math.ceil(rtoFrames / 60);
+  const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+  const seconds = String(totalSeconds % 60).padStart(2, '0');
+  const rtoWarnFrames = Math.min(60 * 60, Math.round(rtoMaxFrames * 0.18));
+  ctx.textAlign = 'right';
+  ctx.font = '9px monospace';
+  ctx.fillStyle = '#4aa84a';
+  ctx.fillText(`STAGE ${Math.min(currentLevelIndex + 1, LEVEL_SEQUENCE.length)} / ${LEVEL_SEQUENCE.length}`, W - 10, 16);
   ctx.fillStyle = '#00ddff';
-  ctx.font      = '11px monospace';
-  ctx.fillText(`SN: ${entities.orbsCollected} / ${entities.totalOrbs}`, W - 10, 33);
+  ctx.fillText(`RUN SNAP ${totalCollectedRun}/${Math.max(1, totalRunOrbs)}`, W - 10, 30);
+  ctx.font = 'bold 12px monospace';
+  ctx.fillStyle = rtoFrames <= rtoWarnFrames ? '#ff6666' : '#ffd700';
+  ctx.fillText(`RTO ${minutes}:${seconds}`, W - 10, 47);
+  if (!compact && world.subtitle) {
+    ctx.fillStyle = '#6ecf8f';
+    ctx.font = '9px monospace';
+    ctx.fillText(world.subtitle, W - 10, 61);
+  }
   ctx.textAlign = 'left';
 
   // Level progress strip for longer Mario-style stages
   const goalPx = world.goal.col * TILE_SIZE + 16;
   const playerPx = player.x + player.w / 2;
-  const trackX = 220, trackY = 26, trackW = 330, trackH = 5;
+  const trackX = 210;
+  const trackY = compact ? 22 : 22;
+  const trackW = 370;
+  const trackH = 7;
   const playerRatio = Math.max(0, Math.min(1, playerPx / Math.max(goalPx, 1)));
 
   ctx.fillStyle = '#1a5a1a';
   ctx.font      = '8px monospace';
-  ctx.fillText('PATH', trackX - 34, trackY + 4);
+  ctx.fillText('ROUTE', trackX - 42, trackY + 6);
   ctx.fillStyle = 'rgba(0,0,0,0.45)';
   ctx.fillRect(trackX, trackY, trackW, trackH);
   ctx.fillStyle = '#114411';
@@ -1026,11 +1178,24 @@ function drawHUD() {
   ctx.fillStyle = '#ffd700';
   ctx.fillRect(trackX + trackW - 4, trackY - 3, 6, trackH + 6);
 
-  // Checkpoint indicator
-  if (checkpoint) {
-    ctx.fillStyle = '#00aaff';
-    ctx.font      = '9px monospace';
-    ctx.fillText('◈ CHECKPOINT ACTIVE', 10, 45);
+  if (activeBoss) {
+    const bossRatio = Math.max(0, activeBoss.hp / activeBoss.maxHp);
+    const bossX = trackX;
+    const bossY = compact ? 38 : 40;
+    const bossW = trackW;
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+    ctx.fillRect(bossX, bossY, bossW, 12);
+    ctx.fillStyle = '#551122';
+    ctx.fillRect(bossX + 1, bossY + 1, bossW - 2, 10);
+    ctx.fillStyle = '#ff5577';
+    ctx.fillRect(bossX + 1, bossY + 1, Math.round((bossW - 2) * bossRatio), 10);
+    ctx.strokeStyle = 'rgba(255, 160, 180, 0.25)';
+    ctx.strokeRect(bossX, bossY, bossW, 12);
+    ctx.fillStyle = '#ffd7df';
+    ctx.font = 'bold 8px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${activeBoss.bossName}  ${activeBoss.hp}/${activeBoss.maxHp}`, bossX + Math.round(bossW / 2), bossY + 9);
+    ctx.textAlign = 'left';
   }
 
   // Active powerup bars
@@ -1042,87 +1207,61 @@ function drawHUD() {
     { key: 'fire',       label: 'FIR', color: '#ff7722', max: PW_DURATION.fire       },
   ].filter(p => pw[p.key] > 0);
 
-  activePws.forEach((p, i) => {
-    const bx = 10, by = 50 + i * 18;
-    const ratio = pw[p.key] / p.max;
-    ctx.fillStyle = 'rgba(0,0,0,0.5)';
-    ctx.fillRect(bx, by, 80, 10);
-    ctx.fillStyle = p.color;
-    ctx.fillRect(bx, by, Math.round(80 * ratio), 10);
-    ctx.fillStyle = '#ffffff';
+  if (!compact) {
+    activePws.forEach((p, i) => {
+      const bx = 10;
+      const by = 98 + i * 18;
+      const ratio = pw[p.key] / p.max;
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(bx, by, 92, 10);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(bx + 1, by + 1, Math.round((92 - 2) * ratio), 8);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 8px monospace';
+      ctx.fillText(p.label, bx + 97, by + 9);
+    });
+  }
+
+  const statusLines = [];
+  if (checkpoint) statusLines.push({ text: 'CHECKPOINT ACTIVE', color: '#00aaff' });
+  if (player.form === 'big') statusLines.push({ text: 'UP FORM // BRICK BREAK READY', color: '#aaffaa' });
+  if (rollbackCharge > 0) statusLines.push({ text: 'ROLLBACK SNAPSHOT READY', color: '#b7fff0' });
+  if (immutableCharge > 0) statusLines.push({ text: 'IMMUTABLE BACKUP READY', color: '#b6ffbf' });
+  if (corruptionGraceFrames > 0) statusLines.push({ text: 'IMMUTABLE PASS ACTIVE', color: '#dffff0' });
+  if (pw.doublejump > 0 && !player.grounded) statusLines.push({ text: doubleJumpUsed ? 'SNAP CHAIN SPENT' : 'SNAP CHAIN READY', color: doubleJumpUsed ? '#4a7777' : '#8dedff' });
+  if (pw.freeze > 0) statusLines.push({ text: 'L-ALT ICE SHOT', color: '#9feaff' });
+  if (pw.fire > 0) statusLines.push({ text: 'R-ALT FIRE SHOT', color: '#ffd29a' });
+  if (empFrames > 0) statusLines.push({ text: 'EMP JAM // JUMP + SHOTS OFFLINE', color: '#ffbb66' });
+  if (!activeBoss && world?.requiresBossDefeat) statusLines.push({ text: 'WARDEN PURGED // GOAL UNLOCKED', color: '#7dffaf' });
+
+  if (!compact) {
+    let infoY = 98 + activePws.length * 18 + 4;
+    for (const line of statusLines) {
+      ctx.fillStyle = line.color;
+      ctx.font = 'bold 9px monospace';
+      ctx.fillText(line.text, 10, infoY);
+      infoY += 14;
+    }
+  } else if (statusLines.length > 0) {
+    ctx.fillStyle = statusLines[0].color;
     ctx.font = 'bold 8px monospace';
-    ctx.fillText(p.label, bx + 83, by + 9);
-  });
-
-  const totalSeconds = Math.ceil(rtoFrames / 60);
-  const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
-  const seconds = String(totalSeconds % 60).padStart(2, '0');
-  const rtoWarnFrames = Math.min(60 * 60, Math.round(rtoMaxFrames * 0.18));
-  ctx.textAlign = 'right';
-  ctx.font      = 'bold 11px monospace';
-  ctx.fillStyle = rtoFrames <= rtoWarnFrames ? '#ff6666' : '#ffd700';
-  ctx.fillText(`RTO ${minutes}:${seconds}`, W - 10, 48);
-  ctx.textAlign = 'left';
-
-  // Double jump indicator (mid-air)
-  if (pw.doublejump > 0 && !player.grounded) {
-    ctx.fillStyle = doubleJumpUsed ? '#224444' : '#00ddff';
-    ctx.font      = 'bold 11px monospace';
-    ctx.fillText('▲▲', W / 2 - 12, 52);
+    ctx.fillText(statusLines[0].text, 10, 76);
   }
 
-  let infoY = 50 + activePws.length * 18;
-  if (player.form === 'big') {
-    ctx.fillStyle = '#aaffaa';
-    ctx.font      = 'bold 10px monospace';
-    ctx.fillText('UP FORM // BREAK BRICKS', 10, infoY);
-    infoY += 16;
+  if (showTelemetry) {
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.fillRect(0, H - 20, W, 20);
+    ctx.fillStyle = '#2a4a2a';
+    ctx.font = '9px monospace';
+    ctx.fillText(
+      `vx:${player.vx.toFixed(1)}  vy:${player.vy.toFixed(1)}  grounded:${player.grounded}  coyote:${player.coyoteTimer}  buf:${player.jumpBuffer}  camX:${Math.round(cam.x)}`,
+      8, H - 6
+    );
+    ctx.fillStyle = '#2a8a7a';
+    ctx.textAlign = 'right';
+    ctx.fillText('F3 telemetry // H compact HUD', W - 8, H - 6);
+    ctx.textAlign = 'left';
   }
-
-  if (immutableCharge > 0) {
-    ctx.fillStyle = '#b6ffbf';
-    ctx.font      = 'bold 9px monospace';
-    ctx.fillText('IMMUTABLE BACKUP READY', 10, infoY);
-    infoY += 14;
-  }
-
-  if (corruptionGraceFrames > 0) {
-    ctx.fillStyle = '#dffff0';
-    ctx.font      = 'bold 9px monospace';
-    ctx.fillText('IMMUTABLE PASS ACTIVE', 10, infoY);
-    infoY += 14;
-  }
-
-  const shotHints = [];
-  if (pw.freeze > 0) shotHints.push({ label: 'L-ALT ICE SHOT', color: '#9feaff' });
-  if (pw.fire > 0) shotHints.push({ label: 'R-ALT FIRE SHOT', color: '#ffd29a' });
-  for (const hint of shotHints) {
-    ctx.fillStyle = hint.color;
-    ctx.font      = 'bold 9px monospace';
-    ctx.fillText(hint.label, 10, infoY);
-    infoY += 14;
-  }
-
-  if (empFrames > 0) {
-    ctx.fillStyle = '#ffbb66';
-    ctx.font      = 'bold 9px monospace';
-    ctx.fillText('EMP JAM // JUMP + SHOTS OFFLINE', 10, infoY);
-    infoY += 14;
-  }
-
-  // Bottom debug bar
-  ctx.fillStyle = 'rgba(0,0,0,0.4)';
-  ctx.fillRect(0, H - 20, W, 20);
-  ctx.fillStyle = '#2a4a2a';
-  ctx.font = '9px monospace';
-  ctx.fillText(
-    `vx:${player.vx.toFixed(1)}  vy:${player.vy.toFixed(1)}  grounded:${player.grounded}  coyote:${player.coyoteTimer}  buf:${player.jumpBuffer}  camX:${Math.round(cam.x)}`,
-    8, H - 6
-  );
-  ctx.fillStyle = '#2a3a2a';
-  ctx.textAlign = 'right';
-  ctx.fillText('Shift run // Alt-L ice // Alt-R fire', W - 8, H - 6);
-  ctx.textAlign = 'left';
 }
 
 function getRunSummary() {
@@ -1647,7 +1786,7 @@ function drawTitle() {
   ctx.textAlign = 'right';
   ctx.font      = '9px monospace';
   ctx.fillStyle = '#1a5a1a';
-  ctx.fillText(`SESSION ${uu}:${us}  |  v1.0.0`, cardX + cardW - 10, cardY + cardH - 28);
+  ctx.fillText(`SESSION ${uu}:${us}  |  ${GAME_VERSION}`, cardX + cardW - 10, cardY + cardH - 28);
 
   // Blink prompt
   if (bootLine >= BOOT_LOG.length) {
@@ -1681,7 +1820,7 @@ function drawPause() {
   ctx.fillRect(0, 0, W, H);
 
   const cx = W / 2, cy = H / 2;
-  const pw = 340, ph = 224;
+  const pw = 360, ph = 256;
 
   ctx.fillStyle = 'rgba(0,10,0,0.95)';
   ctx.fillRect(cx - pw/2, cy - ph/2, pw, ph);
@@ -1705,12 +1844,15 @@ function drawPause() {
   ctx.fillText('SHIFT —  RUN / LONG JUMP', cx, cy + 24);
   ctx.fillText('L-ALT —  ICE SHOT', cx, cy + 48);
   ctx.fillText('R-ALT —  FIRE SHOT', cx, cy + 72);
+  ctx.fillText('H     —  TOGGLE HUD VIEW', cx, cy + 96);
+  ctx.fillText('F3    —  TELEMETRY OVERLAY', cx, cy + 120);
 
   ctx.fillStyle = '#1a5a1a';
   ctx.font      = '10px monospace';
-  ctx.fillText(`LIVES: ${lives} / ${MAX_LIVES}   SNAPSHOTS: ${entities.orbsCollected} / ${entities.totalOrbs}`, cx, cy + 104);
-  ctx.fillText(world.name, cx, cy + 120);
-  if (world.subtitle) ctx.fillText(world.subtitle, cx, cy + 136);
+  ctx.fillText(`LIVES: ${lives}   SNAPSHOTS: ${entities.orbsCollected} / ${entities.totalOrbs}`, cx, cy + 156);
+  ctx.fillText(`HUD: ${hudMode.toUpperCase()}   VERSION: ${GAME_VERSION}`, cx, cy + 172);
+  ctx.fillText(world.name, cx, cy + 188);
+  if (world.subtitle) ctx.fillText(world.subtitle, cx, cy + 204);
 
   ctx.textAlign = 'left';
   drawScanlines();
