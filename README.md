@@ -43,7 +43,7 @@ Touch controls are displayed automatically on mobile devices.
 | **Snapshot Orbs** | Recovery artifacts — checkpoint-marked orbs set your respawn point |
 | **Golden Backup** | The recovery target — reach it to complete the level |
 | **RTO Timer** | Recovery Time Objective — if it hits zero, the recovery window is lost |
-| **Lives (▣▣▣)** | Replication count — your redundancy budget before the run fails |
+| **Lives** | Replication count — your redundancy budget before the run fails |
 | **Rogue Packets** | Corrupt network traffic causing outage events |
 | **HA Powerup** | High Availability — temporary invincibility |
 | **TR Powerup** | Turbo Replication — movement speed boost |

@@ -92,48 +92,6 @@ class RoguePacket {
     }
   }
 
-  draw(ctx, camX) {
-    if (this.dead) return;
-    const sx     = Math.round(this.x - camX);
-    const sy     = Math.round(this.y);
-    const glitch = this.tick % 10 < 2;
-    const dx     = glitch ? (Math.random() > 0.5 ? 3 : -2) : 0;
-
-    // Shadow
-    ctx.fillStyle = 'rgba(200,0,0,0.2)';
-    ctx.fillRect(sx + 2, sy + 2, this.w, this.h);
-
-    // Body
-    ctx.fillStyle = glitch ? '#ff2222' : '#cc0000';
-    ctx.fillRect(sx + dx, sy, this.w, this.h);
-
-    // Glitch stripe
-    if (glitch) {
-      ctx.fillStyle = 'rgba(255, 140, 0, 0.7)';
-      ctx.fillRect(sx - 4 + dx, sy + 6, this.w + 6, 4);
-    }
-
-    // Corrupted pixel noise
-    ctx.fillStyle = '#ff6666';
-    ctx.fillRect(sx + dx + 2,  sy + 2,  4, 4);
-    ctx.fillRect(sx + dx + 14, sy + 14, 4, 4);
-    ctx.fillStyle = '#ffaaaa';
-    ctx.fillRect(sx + dx + 10, sy + 4,  2, 2);
-    ctx.fillRect(sx + dx + 4,  sy + 14, 2, 2);
-
-    // Label
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 6px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText('ERR', sx + dx + 11, sy + 14);
-    ctx.textAlign = 'left';
-
-    // Direction indicator (little arrow)
-    ctx.fillStyle = '#ff4444';
-    if (this.vx > 0) ctx.fillRect(sx + this.w + 1, sy + 8, 4, 6);
-    else              ctx.fillRect(sx - 5,           sy + 8, 4, 6);
-  }
-
   // Returns 'stomp' if player lands on top, 'hit' if side/bottom, null if no overlap
   collideWith(player) {
     if (this.dead) return null;
