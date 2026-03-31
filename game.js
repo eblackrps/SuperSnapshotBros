@@ -726,6 +726,12 @@ function update() {
     player.brokenTiles = null;
   }
 
+  if (player.bumpedBreakable) {
+    addFloatingText(player.x + player.w / 2, player.y - 8, 'UP FORM NEEDED', '#c8ffb5');
+    addShake(2, 6);
+    player.bumpedBreakable = false;
+  }
+
   // Land detection
   if (player.grounded && !player.wasGrounded) sfxLand();
   player.wasGrounded = player.grounded;

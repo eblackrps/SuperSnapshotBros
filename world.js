@@ -111,7 +111,7 @@ function buildWorld11Tiles() {
 
   // Breakable maintenance bricks for big-form reward routes
   fillBreakableRect(tiles, 109, 113, 11, 11);
-  fillBreakableRect(tiles, 148, 151, 9, 9);
+  fillBreakableRect(tiles, 148, 151, 11, 11);
   fillBreakableRect(tiles, 168, 170, 11, 11);
 
   // Final backup vault shell
@@ -450,10 +450,11 @@ const LEVELS = {
       { type: 'shield',     col:  67, row:  2 },  // calm before the midpoint descent
       { type: 'fire',       col:  80, row:  3 },  // first ranged attack appears on the descent
       { type: 'freeze',     col:  90, row:  5 },  // cold shot shows up before the service bay
+      { type: 'grow',       col: 104, row: 12 },  // makes the service-bay brick room readable
       { type: 'freeze',     col: 112, row: 10 },  // service-bay crowd control refresh
       { type: 'speed',      col: 112, row:  8 },  // bonus route lure
       { type: 'life',       col: 131, row:  4 },  // high-risk optional reward
-      { type: 'grow',       col: 150, row:  8 },  // lets late-stage players crack brick stacks
+      { type: 'grow',       col: 149, row: 12 },  // puts big-form access right before the late brick stack
       { type: 'doublejump', col: 148, row:  5 },  // helps the late staircase recover
       { type: 'fire',       col: 160, row:  3 },  // late-stage purge burst for the vault climb
       { type: 'freeze',     col: 170, row: 10 },  // final crowd-control refresh
@@ -932,6 +933,7 @@ function resolveY(entity) {
   const leftCol  = pixToCol(entity.x + 1);
   const rightCol = pixToCol(entity.x + entity.w - 2);
   entity.brokenTiles = null;
+  entity.bumpedBreakable = false;
 
   if (entity.vy > 0) {
     const row = pixToRow(entity.y + entity.h);
@@ -943,6 +945,7 @@ function resolveY(entity) {
   } else if (entity.vy < 0) {
     const row = pixToRow(entity.y);
     const brokenTiles = [];
+    const hitBreakable = isBreakable(leftCol, row) || isBreakable(rightCol, row);
     if (entity.canBreakBricks) {
       if (isBreakable(leftCol, row)) {
         breakTile(leftCol, row);
@@ -957,6 +960,10 @@ function resolveY(entity) {
       entity.y = (row + 1) * TILE_SIZE;
       entity.vy = Math.max(0.8, entity.vy * -0.15);
       entity.brokenTiles = brokenTiles;
+    } else if (hitBreakable) {
+      entity.y = (row + 1) * TILE_SIZE;
+      entity.vy = 0;
+      entity.bumpedBreakable = true;
     } else if (isSolid(leftCol, row) || isSolid(rightCol, row)) {
       entity.y  = (row + 1) * TILE_SIZE;
       entity.vy = 0;
