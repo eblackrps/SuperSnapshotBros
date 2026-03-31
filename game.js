@@ -32,8 +32,8 @@ const SHOT_COOLDOWN = 14;
 let gameState = 'title';
 
 let transitionFlash = 0;
-let lives           = 3;
-const MAX_LIVES     = 3;
+let lives           = 6;
+const MAX_LIVES     = 6;
 
 // Checkpoint
 let checkpoint = null;
