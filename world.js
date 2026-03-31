@@ -74,11 +74,11 @@ function buildWorld11Tiles() {
   fillRow(tiles, 8, 25, 31);
   fillRow(tiles, 6, 36, 42);
   fillRow(tiles, 4, 47, 54);
-  fillRow(tiles, 2, 59, 71);
+  fillRow(tiles, 3, 59, 71);
 
   // Summit support towers to make the midpoint feel like a destination
-  fillRect(tiles, 59, 61, 3, 12);
-  fillRect(tiles, 69, 71, 3, 12);
+  fillRect(tiles, 59, 61, 4, 12);
+  fillRect(tiles, 69, 71, 4, 12);
 
   // Beat 3: descent toward the quiet checkpoint plateau
   fillRow(tiles, 4, 75, 82);
@@ -106,8 +106,8 @@ function buildWorld11Tiles() {
   fillRect(tiles, 103, 104, 10, 12);
   fillRect(tiles, 117, 118, 10, 12);
   fillRow(tiles, 9, 104, 117);
-  clearRect(tiles, 104, 104, 11, 12);
-  clearRect(tiles, 117, 117, 11, 12);
+  clearRect(tiles, 103, 104, 11, 12);
+  clearRect(tiles, 117, 118, 11, 12);
 
   // Breakable maintenance bricks for big-form reward routes
   fillBreakableRect(tiles, 109, 113, 11, 11);
@@ -421,15 +421,15 @@ const LEVELS = {
     // Snapshot Orbs — also serve as restore-point checkpoints
     orbs: [
       // Boot corridor
-      { col:  4, row: 12 },
-      { col: 10, row: 12, checkpoint: true },
+      { col:  4, row: 12, checkpoint: true },
+      { col: 10, row: 12 },
       // Packet ascent
       { col: 18, row:  9 },
       { col: 29, row:  7 },
       { col: 40, row:  5, checkpoint: true },
       { col: 52, row:  3 },
       // First summit
-      { col: 65, row:  1, checkpoint: true },
+      { col: 65, row:  2, checkpoint: true },
       // Descent and midpoint
       { col: 79, row:  3 },
       { col: 90, row:  5 },
@@ -447,7 +447,7 @@ const LEVELS = {
       { type: 'speed',      col:   8, row: 12 },  // reward the early gap clear
       { type: 'grow',       col:  19, row:  9 },  // introduces brick-breaking form
       { type: 'doublejump', col:  41, row:  5 },  // supports the first big climb
-      { type: 'shield',     col:  67, row:  1 },  // calm before the midpoint descent
+      { type: 'shield',     col:  67, row:  2 },  // calm before the midpoint descent
       { type: 'fire',       col:  80, row:  3 },  // first ranged attack appears on the descent
       { type: 'freeze',     col:  90, row:  5 },  // cold shot shows up before the service bay
       { type: 'freeze',     col: 112, row: 10 },  // service-bay crowd control refresh
@@ -507,8 +507,8 @@ const LEVELS = {
       { col: 189, color: '#ffd700' },
     ],
     orbs: [
-      { col:  5, row: 12 },
-      { col: 12, row: 12, checkpoint: true },
+      { col:  5, row: 12, checkpoint: true },
+      { col: 12, row: 12 },
       { col: 20, row:  9 },
       { col: 31, row:  7 },
       { col: 47, row:  5, checkpoint: true },
@@ -592,8 +592,8 @@ const LEVELS = {
       { col: 199, color: '#ffd700' },
     ],
     orbs: [
-      { col:  6, row: 12 },
-      { col: 14, row: 12, checkpoint: true },
+      { col:  6, row: 12, checkpoint: true },
+      { col: 14, row: 12 },
       { col: 21, row:  9 },
       { col: 33, row:  7 },
       { col: 48, row:  5, checkpoint: true },
@@ -680,8 +680,8 @@ const LEVELS = {
       { col: 210, color: '#ffd700' },
     ],
     orbs: [
-      { col:   6, row: 12 },
-      { col:  15, row: 12, checkpoint: true },
+      { col:   6, row: 12, checkpoint: true },
+      { col:  15, row: 12 },
       { col:  22, row:  9 },
       { col:  34, row:  7 },
       { col:  57, row:  9, checkpoint: true },
@@ -768,8 +768,8 @@ const LEVELS = {
       { col: 212, color: '#ffd700' },
     ],
     orbs: [
-      { col:   6, row: 12 },
-      { col:  14, row: 12, checkpoint: true },
+      { col:   6, row: 12, checkpoint: true },
+      { col:  14, row: 12 },
       { col:  21, row:  9 },
       { col:  33, row:  7 },
       { col:  52, row:  5, checkpoint: true },

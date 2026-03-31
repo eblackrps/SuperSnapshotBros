@@ -70,7 +70,7 @@ let bankedOrbsTotal = 0;
 let bankedCheckpointOrbs = 0;
 let levelBannerFrames = 0;
 let goalLockNoticeFrames = 0;
-let hudMode = 'full';
+let hudMode = 'compact';
 let showTelemetry = false;
 
 function resetTransientState() {
@@ -1230,7 +1230,7 @@ function drawHUD() {
   } else if (statusLines.length > 0) {
     ctx.fillStyle = statusLines[0].color;
     ctx.font = 'bold 8px monospace';
-    ctx.fillText(statusLines[0].text, 10, 82);
+    ctx.fillText(statusLines[0].text, 10, 76);
   }
 
   if (showTelemetry) {
