@@ -284,8 +284,15 @@ function respawn(preserveForm = false) {
   player.vx   = 0;
   player.vy   = 0;
   player.grounded = false;
+  player.wasGrounded = false;
+  player.coyoteTimer = 0;
+  player.jumpBuffer = 0;
+  player.jumping = false;
+  player.walkTick = 0;
   player.hitFlash = 40;
   player.platformId = null;
+  pw.shield = pw.speed = pw.doublejump = pw.freeze = pw.fire = 0;
+  doubleJumpUsed = false;
   empFrames = 0;
   immutableCharge = 0;
   corruptionGraceFrames = 0;
@@ -294,6 +301,8 @@ function respawn(preserveForm = false) {
   projectiles.length = 0;
   shotCooldown.freeze = 0;
   shotCooldown.fire = 0;
+  attackLatch.freeze = false;
+  attackLatch.fire = false;
 }
 
 // ─── Goal state ───────────────────────────────────────────────────────────────

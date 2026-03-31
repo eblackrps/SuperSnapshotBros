@@ -449,16 +449,16 @@ const LEVELS = {
       { type: 'doublejump', col:  41, row:  5 },  // supports the first big climb
       { type: 'shield',     col:  67, row:  2 },  // calm before the midpoint descent
       { type: 'fire',       col:  80, row:  3 },  // first ranged attack appears on the descent
-      { type: 'freeze',     col:  90, row:  5 },  // cold shot shows up before the service bay
+      { type: 'freeze',     col:  91, row:  5 },  // cold shot shows up before the service bay
       { type: 'grow',       col: 104, row: 12 },  // makes the service-bay brick room readable
       { type: 'freeze',     col: 112, row: 10 },  // service-bay crowd control refresh
       { type: 'speed',      col: 112, row:  8 },  // bonus route lure
       { type: 'life',       col: 131, row:  4 },  // high-risk optional reward
       { type: 'grow',       col: 149, row: 12 },  // puts big-form access right before the late brick stack
-      { type: 'doublejump', col: 148, row:  5 },  // helps the late staircase recover
-      { type: 'fire',       col: 160, row:  3 },  // late-stage purge burst for the vault climb
+      { type: 'doublejump', col: 150, row:  5 },  // helps the late staircase recover
+      { type: 'fire',       col: 161, row:  3 },  // late-stage purge burst for the vault climb
       { type: 'freeze',     col: 170, row: 10 },  // final crowd-control refresh
-      { type: 'shield',     col: 169, row:  2 },  // final vault approach buffer
+      { type: 'shield',     col: 168, row:  2 },  // final vault approach buffer
     ],
     // Enemies — patrol between patrolLeft and patrolRight (tile cols)
     enemies: [
@@ -529,13 +529,13 @@ const LEVELS = {
       { type: 'speed',      col:   8, row: 12 },
       { type: 'grow',       col:  18, row:  9 },
       { type: 'doublejump', col:  43, row:  5 },
-      { type: 'fire',       col:  59, row:  8 },
+      { type: 'fire',       col:  60, row:  8 },
       { type: 'freeze',     col:  75, row:  5 },
       { type: 'shield',     col:  89, row:  7 },
       { type: 'speed',      col: 105, row: 10 },
       { type: 'life',       col: 116, row:  8 },
       { type: 'grow',       col: 127, row:  5 },
-      { type: 'doublejump', col: 138, row:  9 },
+      { type: 'doublejump', col: 139, row:  9 },
       { type: 'freeze',     col: 154, row:  7 },
       { type: 'fire',       col: 165, row:  5 },
       { type: 'shield',     col: 181, row:  3 },
@@ -616,7 +616,7 @@ const LEVELS = {
       { type: 'immutable',  col:  66, row:  7 },
       { type: 'shield',     col:  79, row:  5 },
       { type: 'freeze',     col:  94, row: 10 },
-      { type: 'immutable',  col: 112, row:  7 },
+      { type: 'immutable',  col: 113, row:  7 },
       { type: 'life',       col: 110, row:  8 },
       { type: 'fire',       col: 125, row:  5 },
       { type: 'speed',      col: 146, row:  8 },
