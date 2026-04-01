@@ -16,7 +16,7 @@ GitHub Pages: [https://eblackrps.github.io/SuperSnapshotBros/](https://eblackrps
 
 Releases: [https://github.com/eblackrps/SuperSnapshotBros/releases](https://github.com/eblackrps/SuperSnapshotBros/releases)
 
-Current campaign build: `v1.3.0` through `World 2-1`
+Current campaign build: `v1.4.0` through `World 2-3`
 
 ---
 
@@ -30,6 +30,8 @@ Current campaign build: `v1.3.0` through `World 2-1`
 | `W` / `↑` / `Space` | Jump |
 | `Left Alt` | Fire cold shot when `STN` is active |
 | `Right Alt` | Fire purge burst when `FIR` is active |
+| `C` | Continue from latest unlocked stage on title / results |
+| `Tab` / `S` | Open the network map / stage select |
 | `H` | Toggle full / compact HUD |
 | `F3` | Toggle telemetry overlay |
 | `Esc` | Pause / Resume |
@@ -59,6 +61,7 @@ Touch controls are displayed automatically on mobile devices.
 | **Rollback Snapshot** | One automatic restore to the last checkpoint without losing a life |
 | **Corruption Field** | Unsafe restore zone — costs a life unless protected |
 | **Undertow Field** | Lateral flow lane — drags you across flooded restore routes |
+| **Vent Lift** | Vertical pressure stream — boosts you upward through flooded routes |
 | **+1 Powerup** | Extra Replica — bonus life |
 | **Tide Skimmer** | Water-world threat sweeping the flooded lanes |
 | **World 1-1** | *Hypervisor Crash* — the inciting incident |
@@ -70,6 +73,8 @@ Touch controls are displayed automatically on mobile devices.
 | **World 1-7** | *Archive Causeway* — mirrored outage lanes before the keep |
 | **World 1-8** | *Recovery Keep* — the castle finale and the World 1 boss |
 | **World 2-1** | *Tidal Mirror* — undertow fields, floating relays, and a water-world pivot |
+| **World 2-2** | *Flooded Replica* — buoy relays, vent lifts, and mirror-lock routing |
+| **World 2-3** | *Undertow Exchange* — harder current lanes and vent-fed routes |
 | **Ransomware Warden** | DR mini-boss guarding the final vault in `1-5` |
 | **Split-Brain Sovereign** | World boss ruling the castle in `1-8` |
 
@@ -105,7 +110,8 @@ Touch controls are displayed automatically on mobile devices.
 - **Rollback Snapshot** — `RBK` auto-restores you to the last checkpoint without burning a life
 - **Mini-boss finale** — `1-5` ends with the Ransomware Warden and a boss health bar
 - **World boss castle** — `1-8` ends World 1 with the Split-Brain Sovereign and a locked-goal fortress arena
-- **Water-world shift** — `2-1` introduces undertow lanes, buoy lifts, and Tide Skimmer enemies
+- **Water-world arc** — `2-1` through `2-3` introduce undertow lanes, vent lifts, buoy relays, and Tide Skimmer enemies
+- **Network map + continue** — title flow now supports unlocked-stage selection and continue support
 - **Enhanced HUD** — redundancy bar, run snapshot counts, boss bar, compact mode, and optional telemetry overlay
 - **Enemy stomp** — land on Rogue Packets to squash them; chain stomps for a bounce
 - **Squash & stretch** — enemies flatten with physics-accurate deformation on stomp
@@ -126,6 +132,7 @@ music.js        — chiptune sequencer and patterns
 game.js         — game loop, player physics, input, HUD, all screen states
 CHANGELOG.md    — release notes and milestone history
 LICENSE         — MIT license
+WORLD2_DESIGN.md — World 2 theme and mechanics guide
 ```
 
 ## Planning Docs
@@ -136,6 +143,7 @@ The repo also keeps its design and roadmap notes in version control:
 - `WORLD1_ROADMAP.md`
 - `NEXT_3_SESSIONS.md`
 - `BUILD_PLAN.md`
+- `WORLD2_DESIGN.md`
 
 ---
 
@@ -171,8 +179,8 @@ Six ascending platforms form the recovery path. The gap in the ground forces you
 See [`BUILD_PLAN.md`](BUILD_PLAN.md) for the full phase breakdown.
 
 Planned additions:
-- Build out the rest of World 2 beyond `2-1`
-- World select map (network topology style)
+- Build out the rest of World 2 beyond `2-3`
+- Expand the network map into a full multi-world overview
 - Rising Log Data mechanic (rising floor)
 - Web-font pixel art title logo
 

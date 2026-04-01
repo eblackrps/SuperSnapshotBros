@@ -28,7 +28,7 @@ const SHOT_LIFE     = 56;
 const SHOT_COOLDOWN = 14;
 
 // ─── Game state ───────────────────────────────────────────────────────────────
-// 'title' | 'playing' | 'paused' | 'gameover' | 'complete'
+// 'title' | 'map' | 'playing' | 'paused' | 'gameover' | 'complete'
 let gameState = 'title';
 
 let transitionFlash = 0;
@@ -44,6 +44,7 @@ let doubleJumpUsed = false;
 let empFrames = 0;
 let undertowFrames = 0;
 let undertowFlow = 0;
+let ventFrames = 0;
 let immutableCharge = 0;
 let corruptionGraceFrames = 0;
 let rollbackCharge = 0;
@@ -60,8 +61,9 @@ let rtoMaxFrames = DEFAULT_RTO_FRAMES;
 let rtoFrames = rtoMaxFrames;
 let gameOverCause = 'lives';
 const SITE_URL = 'https://anystackarchitect.com';
-const GAME_VERSION = 'v1.3.0';
-const LEVEL_SEQUENCE = ['1-1', '1-2', '1-3', '1-4', '1-5', '1-6', '1-7', '1-8', '2-1'];
+const GAME_VERSION = 'v1.4.0';
+const LEVEL_SEQUENCE = ['1-1', '1-2', '1-3', '1-4', '1-5', '1-6', '1-7', '1-8', '2-1', '2-2', '2-3'];
+const PROGRESS_KEY = 'ssb-progress';
 let currentLevelIndex = 0;
 let currentLevelId = LEVEL_SEQUENCE[0];
 let runDeaths = 0;
@@ -74,6 +76,7 @@ let levelBannerFrames = 0;
 let goalLockNoticeFrames = 0;
 let hudMode = 'compact';
 let showTelemetry = false;
+let mapSelectionIndex = 0;
 
 function resetTransientState() {
   pw.shield = pw.speed = pw.doublejump = pw.freeze = pw.fire = 0;
@@ -81,6 +84,7 @@ function resetTransientState() {
   empFrames = 0;
   undertowFrames = 0;
   undertowFlow = 0;
+  ventFrames = 0;
   immutableCharge = 0;
   corruptionGraceFrames = 0;
   rollbackCharge = 0;
@@ -118,10 +122,12 @@ function advanceToNextLevel() {
   bankedOrbsCollected += entities.orbsCollected;
   bankedOrbsTotal += entities.totalOrbs;
   bankedCheckpointOrbs += entities.orbs.filter(orb => orb.checkpoint).length;
+  markStageProgress(currentLevelId, Math.min(currentLevelIndex + 1, LEVEL_SEQUENCE.length - 1));
   currentLevelIndex++;
 
   if (currentLevelIndex >= LEVEL_SEQUENCE.length) {
     levelComplete = true;
+    markStageProgress(LEVEL_SEQUENCE[LEVEL_SEQUENCE.length - 1], LEVEL_SEQUENCE.length - 1);
     saveBestScore();
     Music.stop();
     return;
@@ -135,7 +141,45 @@ function getLevelRtoFrames(level) {
   return seconds * 60;
 }
 
-function startGame() {
+function normalizeProgress(raw) {
+  const unlockedIndex = Math.max(0, Math.min(LEVEL_SEQUENCE.length - 1, Number.isFinite(raw?.unlockedIndex) ? raw.unlockedIndex : 0));
+  const cleared = Array.isArray(raw?.cleared)
+    ? raw.cleared.filter(id => LEVEL_SEQUENCE.includes(id))
+    : [];
+  return { unlockedIndex, cleared };
+}
+
+function loadCampaignProgress() {
+  try {
+    return normalizeProgress(JSON.parse(localStorage.getItem(PROGRESS_KEY)));
+  } catch {
+    return normalizeProgress(null);
+  }
+}
+
+function saveCampaignProgress(progress) {
+  try {
+    localStorage.setItem(PROGRESS_KEY, JSON.stringify(normalizeProgress(progress)));
+  } catch (_) {}
+}
+
+function markStageProgress(levelId, nextUnlockedIndex) {
+  const progress = loadCampaignProgress();
+  if (!progress.cleared.includes(levelId)) progress.cleared.push(levelId);
+  progress.unlockedIndex = Math.max(progress.unlockedIndex, Math.min(LEVEL_SEQUENCE.length - 1, nextUnlockedIndex));
+  saveCampaignProgress(progress);
+}
+
+function getUnlockedStageCount() {
+  return loadCampaignProgress().unlockedIndex + 1;
+}
+
+function clampMapSelection() {
+  mapSelectionIndex = Math.max(0, Math.min(getUnlockedStageCount() - 1, mapSelectionIndex));
+}
+
+function startRunAtLevel(index) {
+  const safeIndex = Math.max(0, Math.min(LEVEL_SEQUENCE.length - 1, index));
   gameState       = 'playing';
   levelComplete   = false;
   transitionFlash = 18;
@@ -146,8 +190,8 @@ function startGame() {
   floatingTexts.length = 0;
   shakeMag = 0;
   shakeDur = 0;
-  currentLevelIndex = 0;
-  currentLevelId = LEVEL_SEQUENCE[0];
+  currentLevelIndex = safeIndex;
+  currentLevelId = LEVEL_SEQUENCE[safeIndex];
   runDeaths = 0;
   checkpointsActivated = 0;
   runStartedAt = Date.now();
@@ -156,6 +200,15 @@ function startGame() {
   bankedCheckpointOrbs = 0;
   loadRunLevel(currentLevelId, { resetCheckpoint: true, preserveForm: false });
   Music.start();
+}
+
+function startGame() {
+  startRunAtLevel(0);
+}
+
+function continueGame() {
+  const progress = loadCampaignProgress();
+  startRunAtLevel(progress.unlockedIndex);
 }
 
 function loseLife() {
@@ -193,16 +246,62 @@ document.addEventListener('keydown', e => {
     showTelemetry = !showTelemetry;
     return;
   }
-  if (gameState === 'title')    { startGame(); return; }
+  if (gameState === 'title') {
+    if (bootLine < BOOT_LOG.length) {
+      bootLine = BOOT_LOG.length;
+      return;
+    }
+    if (e.code === 'Enter' || e.code === 'Space') { startGame(); return; }
+    if (e.code === 'KeyC') { continueGame(); return; }
+    if (e.code === 'Tab' || e.code === 'KeyS') {
+      mapSelectionIndex = loadCampaignProgress().unlockedIndex;
+      clampMapSelection();
+      gameState = 'map';
+      return;
+    }
+    if (e.code === 'KeyL') {
+      window.open(SITE_URL, '_blank', 'noopener');
+      return;
+    }
+    return;
+  }
+  if (gameState === 'map') {
+    if (e.code === 'Escape' || e.code === 'Tab') { gameState = 'title'; return; }
+    if (e.code === 'ArrowLeft' || e.code === 'KeyA') { mapSelectionIndex--; clampMapSelection(); return; }
+    if (e.code === 'ArrowRight' || e.code === 'KeyD') { mapSelectionIndex++; clampMapSelection(); return; }
+    if (e.code === 'Enter' || e.code === 'Space') { startRunAtLevel(mapSelectionIndex); return; }
+    if (e.code === 'KeyL') {
+      window.open(SITE_URL, '_blank', 'noopener');
+      return;
+    }
+    return;
+  }
   if (gameState === 'complete') {
     if (e.code === 'Enter' || e.code === 'KeyL') {
       window.open(SITE_URL, '_blank', 'noopener');
       return;
     }
+    if (e.code === 'KeyC') { continueGame(); return; }
+    if (e.code === 'Tab' || e.code === 'KeyS') {
+      mapSelectionIndex = loadCampaignProgress().unlockedIndex;
+      clampMapSelection();
+      gameState = 'map';
+      return;
+    }
     startGame();
     return;
   }
-  if (gameState === 'gameover') { startGame(); return; }
+  if (gameState === 'gameover') {
+    if (e.code === 'KeyC') { continueGame(); return; }
+    if (e.code === 'Tab' || e.code === 'KeyS') {
+      mapSelectionIndex = loadCampaignProgress().unlockedIndex;
+      clampMapSelection();
+      gameState = 'map';
+      return;
+    }
+    startGame();
+    return;
+  }
   if (gameState === 'playing'  && e.code === 'Escape') { gameState = 'paused';  sfxPause(); return; }
   if (gameState === 'paused'   && e.code === 'Escape') { gameState = 'playing'; sfxPause(); return; }
   if (gameState === 'paused'   && e.code === 'KeyR')   { restartCurrentLevel(); return; }
@@ -319,6 +418,7 @@ function respawn(preserveForm = false) {
   empFrames = 0;
   undertowFrames = 0;
   undertowFlow = 0;
+  ventFrames = 0;
   immutableCharge = 0;
   corruptionGraceFrames = 0;
   rollbackCharge = 0;
@@ -607,10 +707,12 @@ function refreshHazardEffects() {
   const inEmp = hazards.some(hazard => hazard.type === 'emp');
   const inCorruption = hazards.some(hazard => hazard.type === 'corruption');
   const undertowHazards = hazards.filter(hazard => hazard.type === 'undertow');
+  const ventHazards = hazards.filter(hazard => hazard.type === 'vent');
   const undertowForce = undertowHazards.reduce(
     (sum, hazard) => sum + ((hazard.flow ?? -1) >= 0 ? 1 : -1) * (hazard.strength ?? 0.14),
     0
   );
+  const ventLift = ventHazards.reduce((sum, hazard) => sum + (hazard.lift ?? 0.44), 0);
   if (inEmp) {
     const wasInactive = empFrames === 0;
     empFrames = Math.max(empFrames, EMP_DURATION);
@@ -649,8 +751,21 @@ function refreshHazardEffects() {
     }
   }
 
+  if (ventHazards.length > 0) {
+    const wasInactive = ventFrames === 0;
+    ventFrames = Math.max(ventFrames, 16);
+    player.vy -= ventLift;
+    player.vy = Math.max(player.vy, -6.2);
+    if (wasInactive) {
+      spawnBurst(player.x + player.w / 2, player.y + player.h / 2, 12, ['#bfffff', '#7ce6ff', '#d8fbff'], 0.4, 1.6);
+      addFloatingText(player.x + player.w / 2, player.y - 10, 'VENT LIFT', '#dfffff');
+      addShake(2, 6);
+    }
+  }
+
   if (undertowHazards.length === 0 && undertowFrames === 0) undertowFlow = 0;
   if (inEmp) return 'emp';
+  if (ventHazards.length > 0) return 'vent';
   if (undertowHazards.length > 0) return 'undertow';
   return 'clear';
 }
@@ -677,6 +792,7 @@ function update() {
   if (empFrames     > 0)   empFrames--;
   if (undertowFrames > 0) undertowFrames--;
   else undertowFlow = 0;
+  if (ventFrames > 0) ventFrames--;
   if (corruptionGraceFrames > 0) corruptionGraceFrames--;
   if (goalLockNoticeFrames > 0) goalLockNoticeFrames--;
   if (rtoFrames > 0) rtoFrames--;
@@ -927,6 +1043,7 @@ function update() {
     if (currentLevelIndex < LEVEL_SEQUENCE.length - 1) {
       advanceToNextLevel();
     } else {
+      markStageProgress(currentLevelId, LEVEL_SEQUENCE.length - 1);
       currentLevelIndex = LEVEL_SEQUENCE.length;
       levelComplete = true;
       saveBestScore();
@@ -1161,6 +1278,13 @@ function drawPlayer() {
     ctx.strokeRect(Math.round(player.x - cam.x) - 8, player.y - 4, player.w + 16, player.h + 8);
   }
 
+  if (ventFrames > 0) {
+    const pulse = 0.24 + 0.24 * Math.sin(Date.now() / 70);
+    ctx.strokeStyle = `rgba(210,255,255,${pulse})`;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(Math.round(player.x - cam.x) - 5, player.y - 10, player.w + 10, player.h + 12);
+  }
+
   // Speed trail
   if (pw.speed > 0 && (keys['ArrowLeft'] || keys['KeyA'] || keys['ArrowRight'] || keys['KeyD'])) {
     ctx.globalAlpha = 0.25;
@@ -1355,6 +1479,7 @@ function drawHUD() {
   if (pw.fire > 0) statusLines.push({ text: 'R-ALT FIRE SHOT', color: '#ffd29a' });
   if (empFrames > 0) statusLines.push({ text: 'EMP JAM // JUMP + SHOTS OFFLINE', color: '#ffbb66' });
   if (undertowFrames > 0) statusLines.push({ text: undertowFlow >= 0 ? 'UNDERTOW // FLOW RIGHT' : 'UNDERTOW // FLOW LEFT', color: '#b8fbff' });
+  if (ventFrames > 0) statusLines.push({ text: 'VENT LIFT // UPDRAFT ACTIVE', color: '#e6ffff' });
   if (!activeBoss && world?.requiresBossDefeat) statusLines.push({ text: 'BOSS PURGED // GOAL UNLOCKED', color: '#7dffaf' });
 
   if (!compact) {
@@ -1493,7 +1618,7 @@ function drawComplete() {
 
   ctx.fillStyle = '#3a8a3a';
   ctx.font      = '11px monospace';
-  ctx.fillText('[ ANY OTHER KEY: RUN AGAIN ]', W / 2, H / 2 + 172);
+  ctx.fillText('[ C CONTINUE ]  [ TAB MAP ]  [ ANY OTHER KEY: NEW RUN ]', W / 2, H / 2 + 172);
 
   if (blink) {
     ctx.fillStyle = '#00ddff';
@@ -1527,6 +1652,132 @@ function drawLevelBanner() {
   ctx.textAlign = 'left';
 }
 
+function getMapNodePosition(index) {
+  const [worldNum, stageNum] = LEVEL_SEQUENCE[index].split('-').map(Number);
+  if (worldNum === 1) return { x: 86 + (stageNum - 1) * 78, y: 180 };
+  if (worldNum === 2) return { x: 180 + (stageNum - 1) * 150, y: 286 };
+  return { x: 120 + (stageNum - 1) * 120, y: 180 + (worldNum - 1) * 92 };
+}
+
+function getStageThemeAccent(levelId) {
+  if (levelId.startsWith('2-')) return '#7ce6ff';
+  if (levelId === '1-8') return '#ff9966';
+  return '#00ff41';
+}
+
+function drawMap() {
+  const progress = loadCampaignProgress();
+  const selectedIndex = Math.max(0, Math.min(progress.unlockedIndex, mapSelectionIndex));
+  const selectedId = LEVEL_SEQUENCE[selectedIndex];
+  const selectedMeta = LEVELS[selectedId];
+
+  ctx.fillStyle = '#03110a';
+  ctx.fillRect(0, 0, W, H);
+
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, 'rgba(0, 255, 180, 0.08)');
+  grad.addColorStop(1, 'rgba(0, 40, 80, 0.10)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#00ff41';
+  ctx.font = 'bold 24px monospace';
+  ctx.fillText('NETWORK TOPOLOGY MAP', W / 2, 44);
+
+  ctx.fillStyle = '#6ad39d';
+  ctx.font = '11px monospace';
+  ctx.fillText('SELECT AN UNLOCKED STAGE // ENTER DEPLOYS // ESC RETURNS', W / 2, 64);
+
+  ctx.fillStyle = '#1b5134';
+  ctx.fillRect(60, 94, 680, 2);
+  ctx.fillRect(60, 236, 680, 2);
+
+  ctx.fillStyle = '#2d7ea2';
+  ctx.fillRect(120, 332, 560, 2);
+
+  for (let i = 0; i < LEVEL_SEQUENCE.length - 1; i++) {
+    const a = getMapNodePosition(i);
+    const b = getMapNodePosition(i + 1);
+    ctx.strokeStyle = i < progress.unlockedIndex ? 'rgba(110, 255, 180, 0.35)' : 'rgba(80, 120, 110, 0.18)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+  }
+
+  for (let i = 0; i < LEVEL_SEQUENCE.length; i++) {
+    const id = LEVEL_SEQUENCE[i];
+    const node = getMapNodePosition(i);
+    const unlocked = i <= progress.unlockedIndex;
+    const cleared = progress.cleared.includes(id);
+    const selected = i === selectedIndex;
+    const accent = getStageThemeAccent(id);
+    const radius = selected ? 20 : 15;
+
+    ctx.fillStyle = unlocked ? 'rgba(0, 12, 8, 0.92)' : 'rgba(8, 10, 10, 0.85)';
+    ctx.beginPath();
+    ctx.arc(node.x, node.y, radius + 6, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = unlocked ? accent : '#253139';
+    ctx.beginPath();
+    ctx.arc(node.x, node.y, radius, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (selected) {
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, radius + 4, 0, Math.PI * 2);
+      ctx.stroke();
+    } else if (cleared) {
+      ctx.strokeStyle = '#d8ffe8';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, radius + 2, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = unlocked ? '#03110a' : '#7f8b95';
+    ctx.font = 'bold 10px monospace';
+    ctx.fillText(id, node.x, node.y + 4);
+  }
+
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#2f8c58';
+  ctx.font = '10px monospace';
+  ctx.fillText('WORLD 1 // DATACENTER ARC', 70, 120);
+  ctx.fillStyle = '#4abfe4';
+  ctx.fillText('WORLD 2 // WATER FRONT ARC', 70, 262);
+
+  const cardX = 130;
+  const cardY = 350;
+  const cardW = 540;
+  const cardH = 76;
+  ctx.fillStyle = 'rgba(0, 10, 12, 0.92)';
+  ctx.fillRect(cardX, cardY, cardW, cardH);
+  ctx.strokeStyle = getStageThemeAccent(selectedId);
+  ctx.lineWidth = 2;
+  ctx.strokeRect(cardX, cardY, cardW, cardH);
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 16px monospace';
+  ctx.fillText(selectedMeta.name, W / 2, cardY + 24);
+  ctx.fillStyle = '#9dd9e7';
+  ctx.font = '10px monospace';
+  ctx.fillText(selectedMeta.subtitle || 'RECOVERY STAGE', W / 2, cardY + 42);
+  ctx.fillStyle = '#7debb5';
+  ctx.fillText(`UNLOCKED ${progress.unlockedIndex + 1}/${LEVEL_SEQUENCE.length}   CLEARED ${progress.cleared.length}/${LEVEL_SEQUENCE.length}`, W / 2, cardY + 60);
+  ctx.fillStyle = '#5ec7ff';
+  ctx.fillText('[ ENTER DEPLOY ]  [ LEFT/RIGHT SELECT ]  [ L WEBSITE ]', W / 2, cardY + 76 - 8);
+  ctx.textAlign = 'left';
+
+  drawScanlines();
+}
+
 // ─── Title screen ────────────────────────────────────────────────────────────
 const BOOT_LOG = [
   '> SYSTEM BOOT..................... [OK]',
@@ -1536,7 +1787,7 @@ const BOOT_LOG = [
   '> PRIMARY SITE UNREACHABLE........ [FAIL]',
   '> INITIATING FAILOVER SEQUENCE... [OK]',
   '> LOADING HERO MODULE............. [OK]',
-  '> SUPER SNAPSHOT BROS v1.3........ [READY]',
+  '> SUPER SNAPSHOT BROS v1.4........ [READY]',
 ];
 let titleCamX    = 0;
 let bootLine     = 0;
@@ -1838,7 +2089,7 @@ function drawTitle() {
   ctx.fillStyle = '#00cc44';
   ctx.font      = 'bold 11px monospace';
   ctx.textAlign = 'center';
-  ctx.fillText('◈  DISASTER RECOVERY CONSOLE  v2.3  ◈', W / 2, cardY + 17);
+  ctx.fillText('◈  DISASTER RECOVERY CONSOLE  v2.4  ◈', W / 2, cardY + 17);
 
   // ── Flanking player characters ──
   drawTitlePlayer(cardX - 30, cardY + cardH - 60,  1, 2.4);
@@ -1926,19 +2177,24 @@ function drawTitle() {
   if (bootLine >= BOOT_LOG.length) {
     const blink = Math.floor(Date.now() / 520) % 2 === 0;
     ctx.textAlign   = 'center';
-    ctx.font        = 'bold 13px monospace';
+    ctx.font        = 'bold 12px monospace';
     ctx.shadowColor = '#00ff41';
     ctx.shadowBlur  = blink ? 10 : 0;
     ctx.fillStyle   = blink ? '#00ff41' : '#005500';
-    ctx.fillText('[ PRESS ANY KEY TO INITIATE RECOVERY ]', W / 2, cardY + cardH - 14);
+    ctx.fillText('[ ENTER NEW RUN ]  [ C CONTINUE ]  [ TAB NETWORK MAP ]', W / 2, cardY + cardH - 28);
+    ctx.font = '10px monospace';
+    ctx.fillText('[ L ANYSTACKARCHITECT.COM ]', W / 2, cardY + cardH - 12);
     ctx.shadowBlur  = 0;
   }
 
   // Scrolling ticker + world name
+  const progress = loadCampaignProgress();
   ctx.textAlign = 'center';
   ctx.fillStyle = '#1a4a1a';
   ctx.font      = '9px monospace';
   ctx.fillText(`▶  ${world.name}  ◀`, W / 2, H - 24);
+  ctx.fillStyle = '#2a6f56';
+  ctx.fillText(`LATEST UNLOCKED: ${LEVEL_SEQUENCE[progress.unlockedIndex]}`, W / 2, H - 34);
   drawTicker();
 
   // CRT + VHS on top of everything
@@ -2022,7 +2278,7 @@ function drawGameOver() {
   const blink = Math.floor(Date.now() / 520) % 2 === 0;
   ctx.fillStyle = blink ? '#aaffaa' : '#1a4a1a';
   ctx.font      = '12px monospace';
-  ctx.fillText('[ PRESS ANY KEY TO RETRY ]', cx, cy + 56);
+  ctx.fillText('[ ANY KEY NEW RUN ]  [ C CONTINUE ]  [ TAB MAP ]', cx, cy + 56);
 
   ctx.textAlign = 'left';
   drawScanlines();
@@ -2230,6 +2486,8 @@ function drawTouchControls() {
 function loop() {
   if (gameState === 'title') {
     drawTitle();
+  } else if (gameState === 'map') {
+    drawMap();
   } else {
     update();
     drawBg();

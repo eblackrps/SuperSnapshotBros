@@ -2,6 +2,14 @@
 
 All notable project milestones are tracked here.
 
+## v1.4.0 - World 2 Expansion and Campaign Map
+
+- Added `World 2-2 Flooded Replica` and `World 2-3 Undertow Exchange`.
+- Added `Vent Lift` water hazards alongside the existing undertow lanes.
+- Added a lightweight network map and continue flow using saved campaign progression.
+- Polished title, results, and map UX so the larger campaign is easier to navigate.
+- Added `WORLD2_DESIGN.md` and refreshed repo docs for the new release.
+
 ## v1.3.0 - World 1 Finale and Water Front
 
 - Added `World 1-6`, `1-7`, and `1-8`, completing World 1 as an eight-stage arc.

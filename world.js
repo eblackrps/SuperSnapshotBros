@@ -11,6 +11,8 @@ const WORLD_1_6_COLS = 228;
 const WORLD_1_7_COLS = 232;
 const WORLD_1_8_COLS = 240;
 const WORLD_2_1_COLS = 212;
+const WORLD_2_2_COLS = 224;
+const WORLD_2_3_COLS = 236;
 
 const THEMES = {
   datacenter: {
@@ -29,6 +31,7 @@ const THEMES = {
       emp: { fillBase: '255, 80, 0', strokeBase: '255, 170, 0', stripeBase: '255, 220, 120', label: '#ffdd88', text: 'EMP' },
       corruption: { fillBase: '255, 30, 80', strokeBase: '255, 90, 140', stripeBase: '255, 180, 210', label: '#ffd6e3', text: 'CRC' },
       undertow: { fillBase: '70, 180, 255', strokeBase: '120, 220, 255', stripeBase: '180, 240, 255', label: '#d5f8ff', text: 'TIDE' },
+      vent: { fillBase: '110, 240, 255', strokeBase: '190, 250, 255', stripeBase: '215, 255, 255', label: '#effeff', text: 'VENT' },
     },
   },
   fortress: {
@@ -47,6 +50,7 @@ const THEMES = {
       emp: { fillBase: '255, 120, 40', strokeBase: '255, 190, 90', stripeBase: '255, 220, 160', label: '#ffe1ad', text: 'EMP' },
       corruption: { fillBase: '220, 30, 70', strokeBase: '255, 110, 140', stripeBase: '255, 200, 210', label: '#ffd4dc', text: 'CRC' },
       undertow: { fillBase: '110, 140, 255', strokeBase: '170, 190, 255', stripeBase: '210, 220, 255', label: '#e1e8ff', text: 'FLOW' },
+      vent: { fillBase: '190, 220, 255', strokeBase: '225, 240, 255', stripeBase: '240, 248, 255', label: '#ffffff', text: 'LIFT' },
     },
   },
   water: {
@@ -65,6 +69,7 @@ const THEMES = {
       emp: { fillBase: '100, 180, 255', strokeBase: '170, 220, 255', stripeBase: '220, 245, 255', label: '#eefcff', text: 'ARC' },
       corruption: { fillBase: '200, 40, 90', strokeBase: '255, 110, 150', stripeBase: '255, 205, 225', label: '#ffe3ef', text: 'CRC' },
       undertow: { fillBase: '40, 170, 255', strokeBase: '120, 230, 255', stripeBase: '180, 240, 255', label: '#d7fbff', text: 'TIDE' },
+      vent: { fillBase: '110, 245, 255', strokeBase: '180, 255, 255', stripeBase: '220, 255, 255', label: '#f4ffff', text: 'VENT' },
     },
   },
 };
@@ -82,6 +87,7 @@ function cloneTheme(id = 'datacenter') {
       emp: { ...source.hazards.emp },
       corruption: { ...source.hazards.corruption },
       undertow: { ...source.hazards.undertow },
+      vent: { ...source.hazards.vent },
     },
   };
 }
@@ -604,6 +610,100 @@ function buildWorld21Tiles() {
   fillBreakableRect(tiles, 146, 148, 9, 9);
 
   fillRow(tiles, 6, 190, 206);
+
+  return tiles;
+}
+
+function buildWorld22Tiles() {
+  const tiles = createTileGrid(WORLD_2_2_COLS, LEVEL_ROWS);
+
+  fillRow(tiles, 13, 0, WORLD_2_2_COLS - 1);
+
+  const groundGaps = [
+    [10, 15], [31, 35], [54, 58], [80, 84], [106, 110],
+    [130, 134], [154, 159], [178, 182], [204, 208],
+  ];
+  for (const [start, end] of groundGaps) clearRect(tiles, start, end, 13, 13);
+
+  fillRow(tiles, 11, 8, 15);
+  fillRow(tiles, 9, 21, 28);
+  fillRow(tiles, 7, 36, 43);
+
+  fillRow(tiles, 10, 60, 68);
+  fillRow(tiles, 8, 74, 82);
+  fillRow(tiles, 6, 88, 95);
+
+  fillRow(tiles, 11, 112, 119);
+  fillRow(tiles, 8, 126, 133);
+  fillRow(tiles, 6, 140, 147);
+
+  fillRow(tiles, 10, 164, 171);
+  fillRow(tiles, 8, 176, 183);
+  fillRow(tiles, 6, 190, 197);
+  fillRow(tiles, 4, 202, 223);
+
+  fillRect(tiles, 8, 9, 12, 12);
+  fillRect(tiles, 27, 28, 10, 12);
+  fillRect(tiles, 60, 61, 11, 12);
+  fillRect(tiles, 88, 89, 7, 12);
+  fillRect(tiles, 112, 113, 12, 12);
+  fillRect(tiles, 146, 147, 7, 12);
+  fillRect(tiles, 202, 203, 5, 12);
+  fillRect(tiles, 222, 223, 5, 12);
+
+  fillBreakableRect(tiles, 74, 76, 10, 10);
+  fillBreakableRect(tiles, 141, 143, 9, 9);
+  fillBreakableRect(tiles, 190, 192, 7, 7);
+
+  fillRow(tiles, 5, 204, 223);
+
+  return tiles;
+}
+
+function buildWorld23Tiles() {
+  const tiles = createTileGrid(WORLD_2_3_COLS, LEVEL_ROWS);
+
+  fillRow(tiles, 13, 0, WORLD_2_3_COLS - 1);
+
+  const groundGaps = [
+    [12, 17], [36, 40], [60, 64], [84, 88], [109, 114],
+    [136, 141], [162, 167], [188, 193], [214, 219],
+  ];
+  for (const [start, end] of groundGaps) clearRect(tiles, start, end, 13, 13);
+
+  fillRow(tiles, 11, 8, 16);
+  fillRow(tiles, 9, 24, 31);
+  fillRow(tiles, 7, 42, 49);
+
+  fillRow(tiles, 10, 68, 76);
+  fillRow(tiles, 8, 82, 90);
+  fillRow(tiles, 6, 96, 103);
+
+  fillRow(tiles, 10, 118, 126);
+  fillRow(tiles, 8, 132, 140);
+  fillRow(tiles, 6, 146, 154);
+  fillRow(tiles, 4, 160, 168);
+
+  fillRow(tiles, 10, 176, 183);
+  fillRow(tiles, 8, 188, 195);
+  fillRow(tiles, 6, 202, 209);
+  fillRow(tiles, 4, 214, 221);
+  fillRow(tiles, 3, 226, 235);
+
+  fillRect(tiles, 8, 9, 12, 12);
+  fillRect(tiles, 30, 31, 10, 12);
+  fillRect(tiles, 68, 69, 11, 12);
+  fillRect(tiles, 102, 103, 7, 12);
+  fillRect(tiles, 118, 119, 11, 12);
+  fillRect(tiles, 168, 169, 5, 12);
+  fillRect(tiles, 226, 227, 4, 12);
+  fillRect(tiles, 234, 235, 4, 12);
+
+  fillBreakableRect(tiles, 82, 84, 9, 9);
+  fillBreakableRect(tiles, 146, 148, 7, 7);
+  fillBreakableRect(tiles, 202, 204, 7, 7);
+
+  fillRow(tiles, 4, 228, 235);
 
   return tiles;
 }
@@ -1429,6 +1529,177 @@ const LEVELS = {
       { type: 'emp',      col: 190, row:  6, wTiles: 2, hTiles: 2 },
     ],
     tileBuilder: buildWorld21Tiles,
+  },
+  '2-2': {
+    name: 'World 2-2 — Flooded Replica',
+    subtitle: 'Bubble vents, buoy relays, and unstable mirror lanes',
+    theme: 'water',
+    cols: WORLD_2_2_COLS,
+    rows: LEVEL_ROWS,
+    rtoSeconds: 570,
+    playerStart: { x: 48, y: 384 },
+    goal: { col: 214, row: 3 },
+    sections: [
+      { startCol:   0, endCol:  47, label: 'Breakwater Dock' },
+      { startCol:  48, endCol:  95, label: 'Vent Garden' },
+      { startCol:  96, endCol: 151, label: 'Replica Locks' },
+      { startCol: 152, endCol: 191, label: 'Buoy Spine' },
+      { startCol: 192, endCol: 223, label: 'Flood Crown' },
+    ],
+    landmarks: [
+      { col: 27,  color: '#7ce6ff' },
+      { col: 82,  color: '#d7fbff' },
+      { col: 126, color: '#ffd27a' },
+      { col: 176, color: '#8dffcf' },
+      { col: 214, color: '#ffe680' },
+    ],
+    orbs: [
+      { col:   6, row: 12, checkpoint: true },
+      { col:  14, row: 10 },
+      { col:  27, row:  8 },
+      { col:  42, row:  6, checkpoint: true },
+      { col:  63, row:  9 },
+      { col:  80, row:  7 },
+      { col:  92, row:  5, checkpoint: true },
+      { col: 114, row: 10 },
+      { col: 129, row:  7 },
+      { col: 143, row:  5, checkpoint: true },
+      { col: 166, row:  9 },
+      { col: 178, row:  7 },
+      { col: 192, row:  5, checkpoint: true },
+      { col: 205, row:  4 },
+      { col: 214, row:  3 },
+    ],
+    powerups: [
+      { type: 'doublejump', col:  14, row: 10 },
+      { type: 'speed',      col:  28, row:  8 },
+      { type: 'freeze',     col:  43, row:  6 },
+      { type: 'grow',       col:  63, row:  9 },
+      { type: 'shield',     col:  80, row:  7 },
+      { type: 'rollback',   col:  93, row:  5 },
+      { type: 'fire',       col: 114, row: 10 },
+      { type: 'immutable',  col: 130, row:  7 },
+      { type: 'grow',       col: 143, row:  5 },
+      { type: 'freeze',     col: 167, row:  9 },
+      { type: 'speed',      col: 179, row:  7 },
+      { type: 'life',       col: 205, row:  4 },
+      { type: 'shield',     col: 214, row:  3 },
+    ],
+    enemies: [
+      { type: 'tide-skimmer',   col:  13, row: 12, patrolLeft:  8, patrolRight: 15, amplitude: 10 },
+      { type: 'tide-skimmer',   col:  27, row: 10, patrolLeft: 21, patrolRight: 28, amplitude: 12 },
+      { type: 'rogue-packet',   col:  42, row:  8, patrolLeft: 36, patrolRight: 43 },
+      { type: 'tide-skimmer',   col:  63, row: 10, patrolLeft: 60, patrolRight: 68, amplitude: 9 },
+      { type: 'crypto-process', col:  80, row:  8, patrolLeft: 74, patrolRight: 82, amplitude: 10 },
+      { type: 'tide-skimmer',   col:  92, row:  6, patrolLeft: 88, patrolRight: 95, amplitude: 8 },
+      { type: 'rogue-packet',   col: 114, row: 12, patrolLeft: 112, patrolRight: 119 },
+      { type: 'tide-skimmer',   col: 129, row:  8, patrolLeft: 126, patrolRight: 133, amplitude: 10 },
+      { type: 'crypto-process', col: 143, row:  6, patrolLeft: 140, patrolRight: 147, amplitude: 8 },
+      { type: 'tide-skimmer',   col: 166, row: 10, patrolLeft: 164, patrolRight: 171, amplitude: 10 },
+      { type: 'rogue-packet',   col: 178, row:  8, patrolLeft: 176, patrolRight: 183 },
+      { type: 'tide-skimmer',   col: 205, row:  6, patrolLeft: 202, patrolRight: 210, amplitude: 10 },
+    ],
+    platforms: [
+      { col: 49,  row: 10, wTiles: 2, axis: 'x', travelTiles: 4, periodFrames: 220, phase: 0.18 },
+      { col: 102, row: 11, wTiles: 2, axis: 'y', travelTiles: 3, periodFrames: 200, phase: 0.58 },
+      { col: 152, row:  8, wTiles: 2, axis: 'x', travelTiles: 4, periodFrames: 190, phase: 0.28 },
+      { col: 196, row:  6, wTiles: 2, axis: 'y', travelTiles: 2, periodFrames: 180, phase: 0.72 },
+    ],
+    hazards: [
+      { type: 'undertow', col:  50, row: 11, wTiles: 4, hTiles: 2, flow: 1, strength: 0.15 },
+      { type: 'vent',     col:  73, row:  9, wTiles: 2, hTiles: 4, lift: 0.44 },
+      { type: 'undertow', col: 122, row: 10, wTiles: 4, hTiles: 2, flow: -1, strength: 0.18 },
+      { type: 'vent',     col: 140, row:  8, wTiles: 2, hTiles: 5, lift: 0.48 },
+      { type: 'undertow', col: 174, row:  9, wTiles: 4, hTiles: 2, flow: 1, strength: 0.18 },
+      { type: 'vent',     col: 202, row:  7, wTiles: 2, hTiles: 5, lift: 0.50 },
+    ],
+    tileBuilder: buildWorld22Tiles,
+  },
+  '2-3': {
+    name: 'World 2-3 — Undertow Exchange',
+    subtitle: 'Hard current lanes and vent-fed snapshot routes',
+    theme: 'water',
+    cols: WORLD_2_3_COLS,
+    rows: LEVEL_ROWS,
+    rtoSeconds: 600,
+    playerStart: { x: 48, y: 384 },
+    goal: { col: 230, row: 2 },
+    sections: [
+      { startCol:   0, endCol:  49, label: 'Dock Rupture' },
+      { startCol:  50, endCol: 103, label: 'Current Exchange' },
+      { startCol: 104, endCol: 159, label: 'Vent Ladder' },
+      { startCol: 160, endCol: 203, label: 'Mirror Surge' },
+      { startCol: 204, endCol: 235, label: 'Tide Apex' },
+    ],
+    landmarks: [
+      { col: 28,  color: '#7ce6ff' },
+      { col: 82,  color: '#d7fbff' },
+      { col: 132, color: '#ffd27a' },
+      { col: 186, color: '#8dffcf' },
+      { col: 230, color: '#ffe680' },
+    ],
+    orbs: [
+      { col:   6, row: 12, checkpoint: true },
+      { col:  16, row: 10 },
+      { col:  29, row:  8 },
+      { col:  47, row:  6, checkpoint: true },
+      { col:  70, row:  9 },
+      { col:  84, row:  7 },
+      { col: 100, row:  5, checkpoint: true },
+      { col: 120, row:  9 },
+      { col: 134, row:  7 },
+      { col: 149, row:  5, checkpoint: true },
+      { col: 178, row:  9 },
+      { col: 192, row:  7 },
+      { col: 206, row:  5, checkpoint: true },
+      { col: 220, row:  4 },
+      { col: 230, row:  2 },
+    ],
+    powerups: [
+      { type: 'doublejump', col:  17, row: 10 },
+      { type: 'speed',      col:  29, row:  8 },
+      { type: 'freeze',     col:  48, row:  6 },
+      { type: 'shield',     col:  69, row:  9 },
+      { type: 'rollback',   col:  84, row:  7 },
+      { type: 'fire',       col: 100, row:  5 },
+      { type: 'immutable',  col: 120, row:  9 },
+      { type: 'grow',       col: 134, row:  7 },
+      { type: 'freeze',     col: 149, row:  5 },
+      { type: 'speed',      col: 178, row:  9 },
+      { type: 'fire',       col: 193, row:  7 },
+      { type: 'life',       col: 220, row:  4 },
+      { type: 'shield',     col: 230, row:  2 },
+    ],
+    enemies: [
+      { type: 'tide-skimmer',   col:  14, row: 12, patrolLeft:  8, patrolRight: 16, amplitude: 10 },
+      { type: 'tide-skimmer',   col:  29, row: 10, patrolLeft: 24, patrolRight: 31, amplitude: 12 },
+      { type: 'rogue-packet',   col:  47, row:  8, patrolLeft: 42, patrolRight: 49 },
+      { type: 'tide-skimmer',   col:  70, row: 10, patrolLeft: 68, patrolRight: 76, amplitude: 10 },
+      { type: 'crypto-process', col:  84, row:  8, patrolLeft: 82, patrolRight: 90, amplitude: 9 },
+      { type: 'tide-skimmer',   col: 100, row:  6, patrolLeft: 96, patrolRight: 103, amplitude: 8 },
+      { type: 'rogue-packet',   col: 120, row: 11, patrolLeft: 118, patrolRight: 126 },
+      { type: 'tide-skimmer',   col: 134, row:  8, patrolLeft: 132, patrolRight: 140, amplitude: 10 },
+      { type: 'crypto-process', col: 149, row:  6, patrolLeft: 146, patrolRight: 154, amplitude: 8 },
+      { type: 'tide-skimmer',   col: 178, row: 10, patrolLeft: 176, patrolRight: 183, amplitude: 10 },
+      { type: 'rogue-packet',   col: 192, row:  8, patrolLeft: 188, patrolRight: 195 },
+      { type: 'tide-skimmer',   col: 220, row:  5, patrolLeft: 214, patrolRight: 221, amplitude: 10 },
+    ],
+    platforms: [
+      { col: 54,  row: 11, wTiles: 2, axis: 'x', travelTiles: 4, periodFrames: 220, phase: 0.24 },
+      { col: 109, row: 10, wTiles: 2, axis: 'y', travelTiles: 3, periodFrames: 200, phase: 0.46 },
+      { col: 162, row:  8, wTiles: 2, axis: 'x', travelTiles: 4, periodFrames: 190, phase: 0.18 },
+      { col: 208, row:  6, wTiles: 2, axis: 'y', travelTiles: 2, periodFrames: 180, phase: 0.66 },
+    ],
+    hazards: [
+      { type: 'undertow', col:  58, row: 11, wTiles: 4, hTiles: 2, flow: 1, strength: 0.18 },
+      { type: 'vent',     col:  82, row:  8, wTiles: 2, hTiles: 5, lift: 0.48 },
+      { type: 'undertow', col: 118, row: 10, wTiles: 4, hTiles: 2, flow: -1, strength: 0.20 },
+      { type: 'vent',     col: 146, row:  7, wTiles: 2, hTiles: 6, lift: 0.52 },
+      { type: 'undertow', col: 176, row: 10, wTiles: 4, hTiles: 2, flow: 1, strength: 0.20 },
+      { type: 'vent',     col: 205, row:  6, wTiles: 2, hTiles: 6, lift: 0.54 },
+      { type: 'emp',      col: 223, row:  4, wTiles: 2, hTiles: 2 },
+    ],
+    tileBuilder: buildWorld23Tiles,
   }
 };
 
@@ -1739,6 +2010,27 @@ function drawHazards(ctx, camX) {
       ctx.font = 'bold 7px monospace';
       ctx.textAlign = 'center';
       ctx.fillText(style.text, sx + Math.round(hazard.w / 2), sy + Math.round(hazard.h / 2) + 3);
+      ctx.textAlign = 'left';
+    } else if (hazard.type === 'vent') {
+      const style = theme.hazards.vent;
+      ctx.fillStyle = `rgba(${style.fillBase}, ${0.09 + pulse * 0.10})`;
+      ctx.fillRect(sx, sy, hazard.w, hazard.h);
+
+      ctx.strokeStyle = `rgba(${style.strokeBase}, ${0.35 + pulse * 0.30})`;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(sx + 1, sy + 1, hazard.w - 2, hazard.h - 2);
+
+      ctx.fillStyle = `rgba(${style.stripeBase}, ${0.16 + pulse * 0.16})`;
+      for (let y = sy + hazard.h - 6; y > sy + 6; y -= 12) {
+        ctx.fillRect(sx + Math.round(hazard.w / 2) - 1, y, 2, 6);
+        ctx.fillRect(sx + Math.round(hazard.w / 2) - 4, y + 3, 2, 2);
+        ctx.fillRect(sx + Math.round(hazard.w / 2) + 2, y + 3, 2, 2);
+      }
+
+      ctx.fillStyle = style.label;
+      ctx.font = 'bold 7px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(style.text, sx + Math.round(hazard.w / 2), sy + 10);
       ctx.textAlign = 'left';
     } else {
       const style = theme.hazards.emp;
