@@ -14,6 +14,10 @@ Open `index.html` in any modern browser. No server required.
 
 GitHub Pages: [https://eblackrps.github.io/SuperSnapshotBros/](https://eblackrps.github.io/SuperSnapshotBros/)
 
+Releases: [https://github.com/eblackrps/SuperSnapshotBros/releases](https://github.com/eblackrps/SuperSnapshotBros/releases)
+
+Current campaign build: `v1.3.0` through `World 2-1`
+
 ---
 
 ## Controls
@@ -120,7 +124,18 @@ entities.js     — Snapshot Orbs, Rogue Packet enemies, Powerups, entity manage
 audio.js        — one-shot SFX via Web Audio API
 music.js        — chiptune sequencer and patterns
 game.js         — game loop, player physics, input, HUD, all screen states
+CHANGELOG.md    — release notes and milestone history
+LICENSE         — MIT license
 ```
+
+## Planning Docs
+
+The repo also keeps its design and roadmap notes in version control:
+
+- `GAME_DESIGN.md`
+- `WORLD1_ROADMAP.md`
+- `NEXT_3_SESSIONS.md`
+- `BUILD_PLAN.md`
 
 ---
 
@@ -163,9 +178,15 @@ Planned additions:
 
 ---
 
+## Changelog
+
+Release notes live in [`CHANGELOG.md`](CHANGELOG.md).
+
+---
+
 ## License
 
-MIT — do whatever you want with it.
+Licensed under the [MIT License](LICENSE).
 
 ---
 

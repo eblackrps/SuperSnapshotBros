@@ -236,6 +236,21 @@ function getThemeId() {
   return world?.themeId || 'datacenter';
 }
 
+function getThemePhysics() {
+  if (getThemeId() === 'water') {
+    return {
+      gravity: 0.34,
+      maxFall: 8.7,
+      jumpForce: -11.7,
+    };
+  }
+  return {
+    gravity: GRAVITY,
+    maxFall: MAX_FALL,
+    jumpForce: JUMP_FORCE,
+  };
+}
+
 function getActiveBoss() {
   return entities.enemies.find(enemy => enemy.isBoss && !enemy.dead) || null;
 }
@@ -643,6 +658,7 @@ function refreshHazardEffects() {
 // ─── Update ───────────────────────────────────────────────────────────────────
 function update() {
   if (levelComplete || gameState !== 'playing') return;
+  const themePhysics = getThemePhysics();
 
   if (player.hitFlash > 0) player.hitFlash--;
   if (shakeDur > 0) {
@@ -701,8 +717,8 @@ function update() {
   const falling  = player.vy > 0;
   const cutJump  = !player.jumping && player.vy < 0;
   const gravityMult = falling ? 1.7 : cutJump ? 2.05 : 1.0;
-  player.vy     += GRAVITY * gravityMult;
-  if (player.vy > MAX_FALL) player.vy = MAX_FALL;
+  player.vy     += themePhysics.gravity * gravityMult;
+  if (player.vy > themePhysics.maxFall) player.vy = themePhysics.maxFall;
 
   // Jump tracking
   const jumpLocked = empFrames > 0;
@@ -730,7 +746,7 @@ function update() {
   attackLatch.fire = fireShotHeld;
 
   if (!jumpLocked && player.jumpBuffer > 0 && player.coyoteTimer > 0) {
-    player.vy          = JUMP_FORCE;
+    player.vy          = themePhysics.jumpForce;
     player.jumping     = true;
     player.grounded    = false;
     player.platformId  = null;
@@ -738,7 +754,7 @@ function update() {
     player.jumpBuffer  = 0;
     sfxJump();
   } else if (!jumpLocked && player.jumpBuffer > 0 && !player.grounded && pw.doublejump > 0 && !doubleJumpUsed) {
-    player.vy         = JUMP_FORCE * 0.88;
+    player.vy         = themePhysics.jumpForce * 0.88;
     player.jumping    = true;
     player.jumpBuffer = 0;
     doubleJumpUsed    = true;
@@ -1414,6 +1430,13 @@ function drawComplete() {
   ctx.fillRect(0, 0, W, H);
 
   const summary = getRunSummary();
+  const finalStage = LEVEL_SEQUENCE[LEVEL_SEQUENCE.length - 1];
+  const currentArcLabel = finalStage.startsWith('2-')
+    ? `CURRENT BUILD COMPLETE // THROUGH ${finalStage}`
+    : 'RECOVERY ARC COMPLETE';
+  const subLabel = finalStage.startsWith('2-')
+    ? 'WORLD 1 SECURED // WORLD 2 FRONT OPEN'
+    : 'WORLD 1 CLEARED // WORLD 2 FOOTHOLD SECURED';
   const elapsedMinutes = String(Math.floor(summary.elapsedSeconds / 60)).padStart(2, '0');
   const elapsedSeconds = String(summary.elapsedSeconds % 60).padStart(2, '0');
   const rtoMinutes = String(Math.floor(summary.rtoLeftSeconds / 60)).padStart(2, '0');
@@ -1423,11 +1446,11 @@ function drawComplete() {
 
   ctx.fillStyle = '#ffd700';
   ctx.font = 'bold 36px monospace';
-  ctx.fillText('RECOVERY ARC COMPLETE', W / 2, H / 2 - 122);
+  ctx.fillText(currentArcLabel, W / 2, H / 2 - 122);
 
   ctx.fillStyle = '#00ff41';
   ctx.font = '16px monospace';
-  ctx.fillText('WORLD 1 CLEARED // WORLD 2 FOOTHOLD SECURED', W / 2, H / 2 - 92);
+  ctx.fillText(subLabel, W / 2, H / 2 - 92);
 
   ctx.fillStyle = '#00ddff';
   ctx.font = '13px monospace';
@@ -1475,7 +1498,7 @@ function drawComplete() {
   if (blink) {
     ctx.fillStyle = '#00ddff';
     ctx.font      = '10px monospace';
-    ctx.fillText('Learn the real DR strategy behind the run', W / 2, H / 2 + 192);
+    ctx.fillText(finalStage.startsWith('2-') ? 'More World 2 recovery fronts are queued next' : 'Learn the real DR strategy behind the run', W / 2, H / 2 + 192);
   }
 
   ctx.textAlign = 'left';
@@ -1483,16 +1506,19 @@ function drawComplete() {
 
 function drawLevelBanner() {
   if (levelBannerFrames <= 0 || gameState !== 'playing') return;
+  const theme = world?.theme || null;
+  const stroke = theme?.platform?.top || '#00ffa0';
+  const titleColor = theme?.platform?.light || '#b4ffdc';
   const alpha = levelBannerFrames > 90
     ? 1
     : Math.max(0, levelBannerFrames / 24);
   ctx.fillStyle = `rgba(0, 10, 0, ${0.55 * alpha})`;
   ctx.fillRect(W / 2 - 190, 56, 380, 52);
-  ctx.strokeStyle = `rgba(0, 255, 160, ${0.8 * alpha})`;
+  ctx.strokeStyle = stroke;
   ctx.lineWidth = 2;
   ctx.strokeRect(W / 2 - 190, 56, 380, 52);
   ctx.textAlign = 'center';
-  ctx.fillStyle = `rgba(0, 255, 160, ${alpha})`;
+  ctx.fillStyle = titleColor;
   ctx.font = 'bold 18px monospace';
   ctx.fillText(world.name, W / 2, 78);
   ctx.fillStyle = `rgba(180, 255, 220, ${alpha})`;
@@ -1753,6 +1779,7 @@ function drawTitle() {
   // World scrolling behind
   drawBg();
   drawParallax();
+  drawThemeFX();
   drawWorld(ctx, cam.x);
   drawHazards(ctx, cam.x);
   drawPlatforms(ctx, cam.x);
@@ -2025,6 +2052,66 @@ function drawBg() {
   }
 }
 
+const waterBubbles = Array.from({ length: 26 }, () => ({
+  x: Math.random() * W,
+  y: Math.random() * H,
+  r: 1 + Math.random() * 3,
+  speed: 0.25 + Math.random() * 0.65,
+  drift: (Math.random() - 0.5) * 0.25,
+}));
+
+const fortressEmbers = Array.from({ length: 20 }, () => ({
+  x: Math.random() * W,
+  y: Math.random() * H,
+  size: 1 + Math.random() * 2.5,
+  vy: 0.18 + Math.random() * 0.35,
+  drift: (Math.random() - 0.5) * 0.35,
+}));
+
+function drawThemeFX() {
+  const themeId = getThemeId();
+  if (themeId === 'water') {
+    for (const bubble of waterBubbles) {
+      bubble.y -= bubble.speed;
+      bubble.x += bubble.drift;
+      if (bubble.y < -10) {
+        bubble.y = H + 8;
+        bubble.x = Math.random() * W;
+      }
+      if (bubble.x < -10) bubble.x = W + 8;
+      if (bubble.x > W + 10) bubble.x = -8;
+
+      ctx.strokeStyle = 'rgba(210, 250, 255, 0.32)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(bubble.x, bubble.y, bubble.r, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(124, 230, 255, 0.12)';
+      ctx.beginPath();
+      ctx.arc(bubble.x, bubble.y, Math.max(1, bubble.r - 0.6), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    return;
+  }
+
+  if (themeId === 'fortress') {
+    for (const ember of fortressEmbers) {
+      ember.y -= ember.vy;
+      ember.x += ember.drift;
+      if (ember.y < -12) {
+        ember.y = H + 6;
+        ember.x = Math.random() * W;
+      }
+      if (ember.x < -12) ember.x = W + 8;
+      if (ember.x > W + 12) ember.x = -8;
+      ctx.fillStyle = 'rgba(255, 160, 90, 0.26)';
+      ctx.fillRect(ember.x, ember.y, ember.size + 1, ember.size + 1);
+      ctx.fillStyle = 'rgba(255, 220, 150, 0.55)';
+      ctx.fillRect(ember.x + 1, ember.y, ember.size, ember.size);
+    }
+  }
+}
+
 // ─── Best score (localStorage) ───────────────────────────────────────────────
 const SCORE_KEY = 'ssb-best-campaign';
 
@@ -2147,6 +2234,7 @@ function loop() {
     update();
     drawBg();
     drawParallax();
+    drawThemeFX();
     ctx.save();
     if (shakeDur > 0 && shakeMag > 0.1) {
       const sx = (Math.random() * 2 - 1) * shakeMag;
