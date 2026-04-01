@@ -307,6 +307,120 @@ class CryptoProcess {
   }
 }
 
+// ─── Tide Skimmer ────────────────────────────────────────────────────────────
+class TideSkimmer {
+  constructor(x, y, patrolLeft, patrolRight, amplitude = 10) {
+    this.x = x;
+    this.baseY = y;
+    this.y = y;
+    this.w = 24;
+    this.h = 18;
+    this.vx = 0.95;
+    this.patrolLeft = patrolLeft;
+    this.patrolRight = patrolRight;
+    this.amplitude = amplitude;
+    this.tick = Math.random() * Math.PI * 2;
+    this.dead = false;
+    this.frozen = 0;
+  }
+
+  update() {
+    if (this.dead) return;
+    this.tick += 0.1;
+    if (this.frozen > 0) {
+      this.frozen--;
+      this.y = this.baseY + Math.sin(this.tick) * 3;
+      return;
+    }
+    this.x += this.vx;
+    if (this.x <= this.patrolLeft || this.x + this.w >= this.patrolRight) {
+      this.vx *= -1;
+      this.x += this.vx * 2;
+    }
+    this.y = this.baseY + Math.sin(this.tick) * this.amplitude * 0.45 + Math.sin(this.tick * 0.45) * 3;
+  }
+
+  collideWith(player) {
+    if (this.dead) return null;
+    const overlapX = player.x + player.w - 2 > this.x && player.x + 2 < this.x + this.w;
+    const overlapY = player.y + player.h > this.y && player.y < this.y + this.h;
+    if (!overlapX || !overlapY) return null;
+    if (player.vy > 0 && player.y + player.h < this.y + this.h * 0.62) return 'stomp';
+    return this.frozen > 0 ? null : 'hit';
+  }
+
+  freeze() {
+    if (this.dead) return;
+    this.frozen = 240;
+  }
+
+  hitByProjectile(type) {
+    if (this.dead) return null;
+    if (type === 'freeze') {
+      if (this.frozen > 0) return null;
+      this.freeze();
+      return 'freeze';
+    }
+    if (type === 'fire') {
+      this.stomp();
+      return 'burn';
+    }
+    return null;
+  }
+
+  stomp() {
+    this.dead = true;
+    this.popTick = 18;
+  }
+
+  draw(ctx, camX) {
+    const sx = Math.round(this.x - camX);
+    const sy = Math.round(this.y);
+
+    if (this.dead) {
+      if (this.popTick <= 0) return;
+      this.popTick--;
+      const progress = 1 - this.popTick / 18;
+      ctx.globalAlpha = 1 - progress;
+      ctx.strokeStyle = '#9eefff';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(sx - progress * 10, sy - progress * 8, this.w + progress * 20, this.h + progress * 16);
+      ctx.globalAlpha = 1;
+      return;
+    }
+
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.16)';
+    ctx.fillRect(sx + 3, sy + this.h + 1, this.w - 6, 4);
+
+    ctx.fillStyle = this.frozen > 0 ? '#bfefff' : '#0f6989';
+    ctx.fillRect(sx + 3, sy + 3, this.w - 4, this.h - 5);
+    ctx.fillStyle = this.frozen > 0 ? '#eaffff' : '#21a7cf';
+    ctx.fillRect(sx, sy + 2, this.w - 4, this.h - 6);
+
+    ctx.fillStyle = this.frozen > 0 ? '#8ddfff' : '#7ce6ff';
+    ctx.fillRect(sx + 5, sy + 5, 8, 4);
+    ctx.fillRect(sx + 14, sy + 8, 4, 3);
+    ctx.fillRect(sx + this.w - 6, sy + 6, 5, 2);
+
+    ctx.fillStyle = this.frozen > 0 ? '#d9fbff' : '#022e42';
+    ctx.fillRect(sx + 6, sy + 8, 3, 3);
+    ctx.fillRect(sx + 11, sy + 8, 3, 3);
+
+    ctx.fillStyle = this.frozen > 0 ? '#98eaff' : '#0a3e57';
+    if (this.vx > 0) {
+      ctx.fillRect(sx - 4, sy + 6, 4, 6);
+    } else {
+      ctx.fillRect(sx + this.w - 1, sy + 6, 4, 6);
+    }
+
+    ctx.fillStyle = '#eaffff';
+    ctx.font = 'bold 6px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(this.frozen > 0 ? 'ICE' : 'TIDE', sx + 10, sy + 14);
+    ctx.textAlign = 'left';
+  }
+}
+
 // ─── Ransomware Warden (mini-boss) ───────────────────────────────────────────
 class RansomwareWarden {
   constructor(x, y, arenaLeft, arenaRight) {
@@ -510,6 +624,220 @@ class RansomwareWarden {
   }
 }
 
+// ─── Split-Brain Sovereign (world boss) ──────────────────────────────────────
+class SplitBrainSovereign {
+  constructor(x, y, arenaLeft, arenaRight) {
+    this.x = x;
+    this.baseY = y;
+    this.y = y;
+    this.w = 64;
+    this.h = 48;
+    this.arenaLeft = arenaLeft;
+    this.arenaRight = arenaRight;
+    this.vx = 1;
+    this.speed = 1.45;
+    this.tick = Math.random() * Math.PI * 2;
+    this.dead = false;
+    this.isBoss = true;
+    this.bossName = 'SPLIT-BRAIN SOVEREIGN';
+    this.maxHp = 12;
+    this.hp = this.maxHp;
+    this.invuln = 0;
+    this.frozen = 0;
+    this.attackCooldown = 72;
+    this.forks = [];
+    this.deathTick = 0;
+  }
+
+  spawnForkVolley() {
+    const originX = this.x + this.w / 2;
+    const originY = this.y + 18;
+    const speed = this.hp <= 5 ? 4.9 : 4.2;
+    this.forks.push(
+      { x: originX - 6, y: originY - 10, w: 14, h: 8, vx: -speed, vy: -0.30, life: 82, label: 'SNP' },
+      { x: originX - 6, y: originY + 8,  w: 14, h: 8, vx: speed,  vy: 0.30,  life: 82, label: 'SNP' },
+      { x: originX - 6, y: originY - 4,  w: 14, h: 8, vx: speed * this.vx, vy: 0, life: 72, label: 'CRC' }
+    );
+    if (this.hp <= 8) {
+      this.forks.push(
+        { x: originX - 6, y: originY + 2, w: 12, h: 7, vx: -speed * this.vx * 0.88, vy: 0.18, life: 76, label: 'SPL' }
+      );
+    }
+  }
+
+  updateForks() {
+    for (let i = this.forks.length - 1; i >= 0; i--) {
+      const fork = this.forks[i];
+      fork.x += fork.vx;
+      fork.y += fork.vy;
+      fork.life--;
+      if (fork.life <= 0) this.forks.splice(i, 1);
+    }
+  }
+
+  update() {
+    this.tick += 0.08;
+    this.y = this.baseY + Math.sin(this.tick) * 2;
+    this.updateForks();
+
+    if (this.dead) {
+      if (this.deathTick > 0) this.deathTick--;
+      return;
+    }
+
+    if (this.invuln > 0) this.invuln--;
+    if (this.frozen > 0) this.frozen--;
+
+    const moveSpeed = this.frozen > 0 ? 0.5 : this.speed + (this.hp <= 6 ? 0.18 : 0);
+    this.x += this.vx * moveSpeed;
+    if (this.x <= this.arenaLeft) {
+      this.x = this.arenaLeft;
+      this.vx = 1;
+    } else if (this.x + this.w >= this.arenaRight) {
+      this.x = this.arenaRight - this.w;
+      this.vx = -1;
+    }
+
+    if (this.attackCooldown > 0) {
+      this.attackCooldown--;
+    } else {
+      this.spawnForkVolley();
+      this.attackCooldown = this.frozen > 0 ? 118 : Math.max(34, 86 - (this.maxHp - this.hp) * 4);
+    }
+  }
+
+  collideWith(player) {
+    if (this.dead) return null;
+
+    for (const fork of this.forks) {
+      if (rectsOverlap(player, fork)) return 'hit';
+    }
+
+    const overlapX = player.x + player.w - 3 > this.x && player.x + 3 < this.x + this.w;
+    const overlapY = player.y + player.h > this.y && player.y < this.y + this.h;
+    if (!overlapX || !overlapY) return null;
+
+    if (this.invuln === 0 && player.vy > 0 && player.y + player.h < this.y + this.h * 0.42) return 'stomp';
+    return 'hit';
+  }
+
+  hitByProjectile(type) {
+    if (this.dead) return null;
+    if (type === 'freeze') {
+      if (this.frozen > 0) return null;
+      this.frozen = 120;
+      this.attackCooldown = Math.max(this.attackCooldown, 36);
+      return 'boss-freeze';
+    }
+    if (type === 'fire') return this.takeDamage(1);
+    return null;
+  }
+
+  stomp() {
+    return this.takeDamage(1);
+  }
+
+  takeDamage(amount) {
+    if (this.dead || this.invuln > 0) return null;
+    this.hp = Math.max(0, this.hp - amount);
+    this.invuln = 34;
+    this.vx *= -1;
+    this.attackCooldown = Math.min(this.attackCooldown, 24);
+    if (this.hp <= 0) {
+      this.dead = true;
+      this.deathTick = 70;
+      this.forks = [];
+      return 'boss-kill';
+    }
+    return 'boss-hit';
+  }
+
+  draw(ctx, camX) {
+    for (const fork of this.forks) {
+      const sx = Math.round(fork.x - camX);
+      const sy = Math.round(fork.y + Math.sin((fork.life + this.tick * 12) * 0.18) * 2);
+      const alpha = Math.max(0.18, fork.life / 82);
+      ctx.fillStyle = `rgba(80, 190, 255, ${0.10 + alpha * 0.18})`;
+      ctx.fillRect(sx - 4, sy - 3, fork.w + 8, fork.h + 6);
+      ctx.fillStyle = `rgba(255, 90, 170, ${0.55 * alpha})`;
+      ctx.fillRect(sx, sy, fork.w, fork.h);
+      ctx.fillStyle = '#f4fdff';
+      ctx.font = 'bold 6px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(fork.label, sx + Math.round(fork.w / 2), sy + 7);
+      ctx.textAlign = 'left';
+    }
+
+    const sx = Math.round(this.x - camX);
+    const sy = Math.round(this.y);
+
+    if (this.dead) {
+      if (this.deathTick <= 0) return;
+      const progress = 1 - this.deathTick / 70;
+      ctx.globalAlpha = 1 - progress * 0.9;
+      ctx.strokeStyle = '#7ce6ff';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(sx - progress * 22, sy - progress * 16, this.w + progress * 44, this.h + progress * 32);
+      ctx.fillStyle = 'rgba(255, 120, 180, 0.18)';
+      ctx.fillRect(sx - progress * 16, sy - progress * 12, this.w + progress * 32, this.h + progress * 24);
+      ctx.globalAlpha = 1;
+      return;
+    }
+
+    const pulse = 0.42 + 0.28 * Math.sin(Date.now() / 120);
+    const invulnPulse = this.invuln > 0 ? 0.5 + 0.4 * Math.sin(Date.now() / 70) : 0;
+    const frozenPulse = this.frozen > 0 ? 0.38 + 0.32 * Math.sin(Date.now() / 90) : 0;
+
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+    ctx.fillRect(sx + 5, sy + this.h + 2, this.w - 10, 6);
+
+    ctx.fillStyle = this.frozen > 0 ? '#91e4ff' : '#4b1933';
+    ctx.fillRect(sx + 4, sy + 4, this.w, this.h - 2);
+    ctx.fillStyle = this.frozen > 0 ? '#d9fbff' : '#6b2248';
+    ctx.fillRect(sx, sy, this.w, this.h - 4);
+
+    ctx.fillStyle = this.frozen > 0 ? '#c5f6ff' : '#b2468d';
+    ctx.fillRect(sx + 4, sy + 8, 22, 18);
+    ctx.fillRect(sx + this.w - 26, sy + 8, 22, 18);
+    ctx.fillStyle = this.frozen > 0 ? '#83ddff' : '#162034';
+    ctx.fillRect(sx + 24, sy + 10, 16, 16);
+
+    ctx.fillStyle = '#f8ffff';
+    ctx.fillRect(sx + 8, sy + 12, 5, 4);
+    ctx.fillRect(sx + 17, sy + 12, 5, 4);
+    ctx.fillRect(sx + this.w - 21, sy + 12, 5, 4);
+    ctx.fillRect(sx + this.w - 12, sy + 12, 5, 4);
+
+    ctx.fillStyle = this.frozen > 0 ? '#dffcff' : '#ffd39d';
+    ctx.fillRect(sx + 8, sy + 30, this.w - 16, 7);
+    ctx.fillStyle = this.frozen > 0 ? '#b6f2ff' : '#8de7ff';
+    ctx.fillRect(sx + 24, sy + 14, 16, 8);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 7px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('SPLIT', sx + Math.round(this.w / 2), sy + 20);
+    ctx.fillText('BRAIN', sx + Math.round(this.w / 2), sy + 35);
+    ctx.textAlign = 'left';
+
+    if (this.invuln > 0) {
+      ctx.strokeStyle = `rgba(255, 220, 150, ${invulnPulse})`;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(sx - 3, sy - 3, this.w + 6, this.h + 6);
+    }
+
+    if (this.frozen > 0) {
+      ctx.strokeStyle = `rgba(200, 250, 255, ${frozenPulse})`;
+      ctx.lineWidth = 3;
+      ctx.strokeRect(sx - 5, sy - 5, this.w + 10, this.h + 10);
+    } else {
+      ctx.strokeStyle = `rgba(120, 220, 255, ${0.22 + pulse * 0.28})`;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(sx - 4, sy - 4, this.w + 8, this.h + 8);
+    }
+  }
+}
+
 // ─── Powerup ──────────────────────────────────────────────────────────────────
 const POWERUP_DEFS = {
   shield:     { color: '#0088ff', inner: '#88ddff', label: 'HA',  desc: 'HIGH AVAIL'   },
@@ -634,12 +962,27 @@ const entities = {
           e.patrolRight * TILE_SIZE,
           e.amplitude || 12
         ));
+      } else if (e.type === 'tide-skimmer') {
+        this.enemies.push(new TideSkimmer(
+          e.col  * TILE_SIZE,
+          e.row  * TILE_SIZE - 16,
+          e.patrolLeft  * TILE_SIZE,
+          e.patrolRight * TILE_SIZE,
+          e.amplitude || 10
+        ));
       } else if (e.type === 'ransomware-warden') {
         this.enemies.push(new RansomwareWarden(
           e.col * TILE_SIZE,
           e.row * TILE_SIZE - 42,
           (e.arenaLeft ?? Math.max(0, e.col - 4)) * TILE_SIZE,
           (e.arenaRight ?? e.col + 6) * TILE_SIZE
+        ));
+      } else if (e.type === 'splitbrain-sovereign') {
+        this.enemies.push(new SplitBrainSovereign(
+          e.col * TILE_SIZE,
+          e.row * TILE_SIZE - 48,
+          (e.arenaLeft ?? Math.max(0, e.col - 5)) * TILE_SIZE,
+          (e.arenaRight ?? e.col + 8) * TILE_SIZE
         ));
       }
     }
