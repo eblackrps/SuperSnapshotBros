@@ -7,6 +7,84 @@ const WORLD_1_2_COLS = 196;
 const WORLD_1_3_COLS = 208;
 const WORLD_1_4_COLS = 216;
 const WORLD_1_5_COLS = 220;
+const WORLD_1_6_COLS = 228;
+const WORLD_1_7_COLS = 232;
+const WORLD_1_8_COLS = 240;
+const WORLD_2_1_COLS = 212;
+
+const THEMES = {
+  datacenter: {
+    id: 'datacenter',
+    bgTop: '#050e05',
+    bgBottom: '#0a180a',
+    far: ['#0c1e0c', '#0a180a', '#0d220d', '#0b1c0b'],
+    mid: '#0e260e',
+    midLedOn: '#003310',
+    midLedOff: '#001a08',
+    tile: { body: '#152d15', panel: '#1e421e', top: '#3aaa3a', ledOn: '#00ff41', ledOff: '#003310' },
+    breakable: { body: '#6b4a16', panel: '#9a6a22', detail: '#c79133', top: '#ffd27a' },
+    platform: { rail: 'rgba(0, 255, 200, 0.08)', body: '#15463a', top: '#2be8c1', inset: '#0d221c', light: '#9affea', label: '#062018', text: 'SYNC' },
+    goal: { openBase: '255, 200, 0', lockedBase: '255, 80, 120', label: '#000000', lockedStroke: 'rgba(255, 170, 190, 0.75)' },
+    hazards: {
+      emp: { fillBase: '255, 80, 0', strokeBase: '255, 170, 0', stripeBase: '255, 220, 120', label: '#ffdd88', text: 'EMP' },
+      corruption: { fillBase: '255, 30, 80', strokeBase: '255, 90, 140', stripeBase: '255, 180, 210', label: '#ffd6e3', text: 'CRC' },
+      undertow: { fillBase: '70, 180, 255', strokeBase: '120, 220, 255', stripeBase: '180, 240, 255', label: '#d5f8ff', text: 'TIDE' },
+    },
+  },
+  fortress: {
+    id: 'fortress',
+    bgTop: '#130607',
+    bgBottom: '#241112',
+    far: ['#1d0b0d', '#18080a', '#2a1216', '#120507'],
+    mid: '#2a1216',
+    midLedOn: '#3a191f',
+    midLedOff: '#160709',
+    tile: { body: '#352b33', panel: '#493842', top: '#d0744e', ledOn: '#ffbb77', ledOff: '#2a1511' },
+    breakable: { body: '#5a4632', panel: '#7a5b40', detail: '#bb8b5b', top: '#ffd39c' },
+    platform: { rail: 'rgba(255, 180, 140, 0.08)', body: '#5a2d32', top: '#ff9966', inset: '#2f1014', light: '#ffd3ae', label: '#1a0608', text: 'LIFT' },
+    goal: { openBase: '255, 205, 90', lockedBase: '255, 90, 120', label: '#170406', lockedStroke: 'rgba(255, 190, 160, 0.75)' },
+    hazards: {
+      emp: { fillBase: '255, 120, 40', strokeBase: '255, 190, 90', stripeBase: '255, 220, 160', label: '#ffe1ad', text: 'EMP' },
+      corruption: { fillBase: '220, 30, 70', strokeBase: '255, 110, 140', stripeBase: '255, 200, 210', label: '#ffd4dc', text: 'CRC' },
+      undertow: { fillBase: '110, 140, 255', strokeBase: '170, 190, 255', stripeBase: '210, 220, 255', label: '#e1e8ff', text: 'FLOW' },
+    },
+  },
+  water: {
+    id: 'water',
+    bgTop: '#041622',
+    bgBottom: '#09314a',
+    far: ['#08263a', '#0b3147', '#0a1f31', '#103a52'],
+    mid: '#0d4263',
+    midLedOn: '#0b5b85',
+    midLedOff: '#082638',
+    tile: { body: '#12415a', panel: '#1a5f7e', top: '#7ce6ff', ledOn: '#c6fbff', ledOff: '#0a2230' },
+    breakable: { body: '#6a512f', panel: '#8d6a3e', detail: '#c29a62', top: '#ffe2a8' },
+    platform: { rail: 'rgba(120, 230, 255, 0.10)', body: '#1b5d75', top: '#7ce6ff', inset: '#0c2f41', light: '#d8fbff', label: '#06202b', text: 'BUOY' },
+    goal: { openBase: '255, 230, 120', lockedBase: '255, 100, 150', label: '#04202e', lockedStroke: 'rgba(180, 240, 255, 0.8)' },
+    hazards: {
+      emp: { fillBase: '100, 180, 255', strokeBase: '170, 220, 255', stripeBase: '220, 245, 255', label: '#eefcff', text: 'ARC' },
+      corruption: { fillBase: '200, 40, 90', strokeBase: '255, 110, 150', stripeBase: '255, 205, 225', label: '#ffe3ef', text: 'CRC' },
+      undertow: { fillBase: '40, 170, 255', strokeBase: '120, 230, 255', stripeBase: '180, 240, 255', label: '#d7fbff', text: 'TIDE' },
+    },
+  },
+};
+
+function cloneTheme(id = 'datacenter') {
+  const source = THEMES[id] || THEMES.datacenter;
+  return {
+    ...source,
+    far: [...source.far],
+    tile: { ...source.tile },
+    breakable: { ...source.breakable },
+    platform: { ...source.platform },
+    goal: { ...source.goal },
+    hazards: {
+      emp: { ...source.hazards.emp },
+      corruption: { ...source.hazards.corruption },
+      undertow: { ...source.hazards.undertow },
+    },
+  };
+}
 
 // ─── Level Data ───────────────────────────────────────────────────────────────
 // 0 = empty, 1 = solid
@@ -350,6 +428,182 @@ function buildWorld15Tiles() {
   fillBreakableRect(tiles, 174, 176, 7, 7);
 
   fillRow(tiles, 7, 188, 214);
+
+  return tiles;
+}
+
+function buildWorld16Tiles() {
+  const tiles = createTileGrid(WORLD_1_6_COLS, LEVEL_ROWS);
+
+  fillRow(tiles, 13, 0, WORLD_1_6_COLS - 1);
+
+  const groundGaps = [
+    [8, 10], [25, 27], [43, 45], [63, 66], [86, 89],
+    [108, 111], [132, 135], [156, 159], [180, 183], [204, 206],
+  ];
+  for (const [start, end] of groundGaps) clearRect(tiles, start, end, 13, 13);
+
+  fillRow(tiles, 10, 14, 21);
+  fillRow(tiles, 8, 30, 37);
+  fillRow(tiles, 6, 46, 53);
+  fillRow(tiles, 10, 58, 66);
+  fillRow(tiles, 8, 72, 80);
+  fillRow(tiles, 6, 88, 96);
+  fillRow(tiles, 10, 104, 111);
+  fillRow(tiles, 8, 118, 125);
+  fillRow(tiles, 6, 132, 139);
+  fillRow(tiles, 4, 146, 153);
+  fillRow(tiles, 9, 158, 165);
+  fillRow(tiles, 7, 171, 178);
+  fillRow(tiles, 5, 184, 191);
+  fillRow(tiles, 10, 198, 205);
+  fillRow(tiles, 8, 210, 217);
+  fillRow(tiles, 6, 220, 227);
+
+  fillRect(tiles, 58, 59, 11, 12);
+  fillRect(tiles, 66, 67, 11, 12);
+  fillRect(tiles, 104, 105, 11, 12);
+  fillRect(tiles, 124, 125, 9, 12);
+  fillRect(tiles, 146, 147, 5, 12);
+  fillRect(tiles, 220, 221, 7, 12);
+  fillRect(tiles, 226, 227, 7, 12);
+
+  fillBreakableRect(tiles, 74, 77, 9, 9);
+  fillBreakableRect(tiles, 135, 138, 7, 7);
+  fillBreakableRect(tiles, 184, 187, 9, 9);
+
+  fillRow(tiles, 7, 220, 227);
+
+  return tiles;
+}
+
+function buildWorld17Tiles() {
+  const tiles = createTileGrid(WORLD_1_7_COLS, LEVEL_ROWS);
+
+  fillRow(tiles, 13, 0, WORLD_1_7_COLS - 1);
+
+  const groundGaps = [
+    [9, 12], [29, 31], [48, 50], [69, 72], [91, 94],
+    [116, 119], [141, 144], [164, 167], [186, 189], [208, 210],
+  ];
+  for (const [start, end] of groundGaps) clearRect(tiles, start, end, 13, 13);
+
+  fillRow(tiles, 10, 14, 22);
+  fillRow(tiles, 8, 28, 35);
+  fillRow(tiles, 6, 40, 47);
+  fillRow(tiles, 9, 55, 62);
+  fillRow(tiles, 7, 68, 76);
+  fillRow(tiles, 5, 82, 89);
+  fillRow(tiles, 10, 98, 106);
+  fillRow(tiles, 8, 112, 120);
+  fillRow(tiles, 6, 126, 134);
+  fillRow(tiles, 4, 140, 148);
+  fillRow(tiles, 9, 156, 163);
+  fillRow(tiles, 7, 170, 177);
+  fillRow(tiles, 5, 184, 191);
+  fillRow(tiles, 4, 196, 203);
+  fillRow(tiles, 3, 210, 231);
+
+  fillRect(tiles, 55, 56, 10, 12);
+  fillRect(tiles, 61, 62, 10, 12);
+  fillRect(tiles, 98, 99, 11, 12);
+  fillRect(tiles, 119, 120, 9, 12);
+  fillRect(tiles, 140, 141, 5, 12);
+  fillRect(tiles, 210, 212, 4, 12);
+  fillRect(tiles, 229, 231, 4, 12);
+
+  fillBreakableRect(tiles, 113, 116, 9, 9);
+  fillBreakableRect(tiles, 171, 174, 8, 8);
+  fillBreakableRect(tiles, 198, 200, 6, 6);
+
+  fillRow(tiles, 4, 212, 231);
+
+  return tiles;
+}
+
+function buildWorld18Tiles() {
+  const tiles = createTileGrid(WORLD_1_8_COLS, LEVEL_ROWS);
+
+  fillRow(tiles, 13, 0, WORLD_1_8_COLS - 1);
+
+  const groundGaps = [
+    [11, 13], [29, 31], [47, 49], [66, 69],
+    [88, 91], [111, 114], [134, 137], [156, 159],
+  ];
+  for (const [start, end] of groundGaps) clearRect(tiles, start, end, 13, 13);
+
+  fillRow(tiles, 10, 16, 23);
+  fillRow(tiles, 8, 33, 40);
+  fillRow(tiles, 6, 50, 57);
+  fillRow(tiles, 10, 62, 70);
+  fillRow(tiles, 8, 76, 84);
+  fillRow(tiles, 6, 90, 98);
+  fillRow(tiles, 10, 106, 114);
+  fillRow(tiles, 8, 120, 128);
+  fillRow(tiles, 6, 134, 142);
+  fillRow(tiles, 4, 148, 156);
+  fillRow(tiles, 11, 166, 176);
+  fillRow(tiles, 9, 180, 190);
+  fillRow(tiles, 11, 194, 236);
+  fillRow(tiles, 8, 202, 210);
+  fillRow(tiles, 6, 214, 222);
+  fillRow(tiles, 4, 226, 234);
+  fillRow(tiles, 3, 198, 236);
+
+  for (let col = 198; col <= 236; col += 6) fillRect(tiles, col, Math.min(col + 1, 236), 2, 3);
+
+  fillRect(tiles, 62, 63, 11, 12);
+  fillRect(tiles, 70, 71, 9, 12);
+  fillRect(tiles, 106, 107, 11, 12);
+  fillRect(tiles, 156, 157, 5, 12);
+  fillRect(tiles, 194, 196, 4, 12);
+  fillRect(tiles, 234, 236, 4, 12);
+  fillRect(tiles, 208, 209, 9, 12);
+  fillRect(tiles, 220, 221, 7, 12);
+
+  fillBreakableRect(tiles, 79, 81, 9, 9);
+  fillBreakableRect(tiles, 138, 141, 7, 7);
+  fillBreakableRect(tiles, 172, 175, 10, 10);
+
+  return tiles;
+}
+
+function buildWorld21Tiles() {
+  const tiles = createTileGrid(WORLD_2_1_COLS, LEVEL_ROWS);
+
+  fillRow(tiles, 13, 0, WORLD_2_1_COLS - 1);
+
+  const groundGaps = [
+    [12, 16], [34, 38], [58, 61], [83, 86],
+    [106, 109], [132, 136], [155, 159], [180, 184],
+  ];
+  for (const [start, end] of groundGaps) clearRect(tiles, start, end, 13, 13);
+
+  fillRow(tiles, 11, 8, 16);
+  fillRow(tiles, 9, 22, 30);
+  fillRow(tiles, 7, 40, 48);
+  fillRow(tiles, 10, 65, 73);
+  fillRow(tiles, 8, 79, 87);
+  fillRow(tiles, 6, 94, 101);
+  fillRow(tiles, 10, 114, 122);
+  fillRow(tiles, 8, 128, 136);
+  fillRow(tiles, 6, 143, 151);
+  fillRow(tiles, 9, 160, 168);
+  fillRow(tiles, 7, 174, 182);
+  fillRow(tiles, 5, 188, 206);
+
+  fillRect(tiles, 8, 9, 12, 12);
+  fillRect(tiles, 29, 30, 10, 12);
+  fillRect(tiles, 65, 66, 11, 12);
+  fillRect(tiles, 94, 95, 7, 12);
+  fillRect(tiles, 128, 129, 9, 12);
+  fillRect(tiles, 188, 189, 6, 12);
+  fillRect(tiles, 204, 206, 6, 12);
+
+  fillBreakableRect(tiles, 96, 98, 11, 11);
+  fillBreakableRect(tiles, 146, 148, 9, 9);
+
+  fillRow(tiles, 6, 190, 206);
 
   return tiles;
 }
@@ -833,6 +1087,348 @@ const LEVELS = {
       { type: 'corruption', col: 183, row: 10, wTiles: 2, hTiles: 2 },
     ],
     tileBuilder: buildWorld15Tiles,
+  },
+  '1-6': {
+    name: 'World 1-6 — Snapshot Runoff',
+    subtitle: 'Overflow lanes, brittle caches, and collapse-routing',
+    cols: WORLD_1_6_COLS,
+    rows: LEVEL_ROWS,
+    rtoSeconds: 510,
+    playerStart: { x: 48, y: 384 },
+    goal: { col: 223, row: 5 },
+    sections: [
+      { startCol:   0, endCol:  43, label: 'Runoff Gate' },
+      { startCol:  44, endCol:  97, label: 'Shelf Spill' },
+      { startCol:  98, endCol: 153, label: 'Cache Break' },
+      { startCol: 154, endCol: 191, label: 'Snapshot Drain' },
+      { startCol: 192, endCol: 227, label: 'Overflow Crown' },
+    ],
+    landmarks: [
+      { col: 35,  color: '#00ddff' },
+      { col: 77,  color: '#ffaa00' },
+      { col: 124, color: '#66ff99' },
+      { col: 175, color: '#ffd27a' },
+      { col: 223, color: '#ffd700' },
+    ],
+    orbs: [
+      { col:   6, row: 12, checkpoint: true },
+      { col:  15, row:  9 },
+      { col:  34, row:  7 },
+      { col:  49, row:  5, checkpoint: true },
+      { col:  64, row:  9 },
+      { col:  78, row:  7 },
+      { col:  92, row:  5 },
+      { col: 106, row:  9, checkpoint: true },
+      { col: 120, row:  7 },
+      { col: 136, row:  5 },
+      { col: 149, row:  3, checkpoint: true },
+      { col: 162, row:  8 },
+      { col: 176, row:  6 },
+      { col: 188, row:  4, checkpoint: true },
+      { col: 202, row:  9 },
+      { col: 214, row:  7 },
+      { col: 223, row:  5 },
+    ],
+    powerups: [
+      { type: 'grow',       col:  18, row:  9 },
+      { type: 'speed',      col:  33, row:  7 },
+      { type: 'doublejump', col:  51, row:  5 },
+      { type: 'freeze',     col:  66, row:  9 },
+      { type: 'fire',       col:  82, row:  7 },
+      { type: 'rollback',   col:  95, row:  5 },
+      { type: 'immutable',  col: 110, row:  9 },
+      { type: 'grow',       col: 124, row:  7 },
+      { type: 'shield',     col: 138, row:  5 },
+      { type: 'speed',      col: 151, row:  3 },
+      { type: 'rollback',   col: 166, row:  8 },
+      { type: 'fire',       col: 186, row:  5 },
+      { type: 'life',       col: 214, row:  7 },
+      { type: 'freeze',     col: 223, row:  5 },
+    ],
+    enemies: [
+      { type: 'rogue-packet',   col:  16, row: 10, patrolLeft: 14, patrolRight: 21 },
+      { type: 'rogue-packet',   col:  33, row:  8, patrolLeft: 30, patrolRight: 37 },
+      { type: 'crypto-process', col:  49, row:  6, patrolLeft: 46, patrolRight: 53, amplitude: 10 },
+      { type: 'rogue-packet',   col:  62, row: 10, patrolLeft: 58, patrolRight: 66 },
+      { type: 'crypto-process', col:  78, row:  8, patrolLeft: 72, patrolRight: 80, amplitude: 11 },
+      { type: 'rogue-packet',   col:  92, row:  6, patrolLeft: 88, patrolRight: 96 },
+      { type: 'rogue-packet',   col: 106, row: 10, patrolLeft: 104, patrolRight: 111 },
+      { type: 'crypto-process', col: 121, row:  8, patrolLeft: 118, patrolRight: 125, amplitude: 12 },
+      { type: 'rogue-packet',   col: 136, row:  6, patrolLeft: 132, patrolRight: 139 },
+      { type: 'rogue-packet',   col: 161, row:  9, patrolLeft: 158, patrolRight: 165 },
+      { type: 'crypto-process', col: 175, row:  7, patrolLeft: 171, patrolRight: 178, amplitude: 10 },
+      { type: 'rogue-packet',   col: 187, row:  5, patrolLeft: 184, patrolRight: 191 },
+      { type: 'crypto-process', col: 214, row:  6, patrolLeft: 210, patrolRight: 217, amplitude: 8 },
+    ],
+    platforms: [
+      { col: 56,  row: 11, wTiles: 2, axis: 'y', travelTiles: 3, periodFrames: 220, phase: 0.16 },
+      { col: 101, row:  8, wTiles: 2, axis: 'x', travelTiles: 3, periodFrames: 200, phase: 0.62 },
+      { col: 154, row: 10, wTiles: 2, axis: 'y', travelTiles: 2, periodFrames: 180, phase: 0.38 },
+      { col: 196, row:  8, wTiles: 2, axis: 'x', travelTiles: 4, periodFrames: 170, phase: 0.22 },
+    ],
+    hazards: [
+      { type: 'emp',        col:  70, row: 10, wTiles: 2, hTiles: 2 },
+      { type: 'corruption', col: 118, row:  8, wTiles: 3, hTiles: 2 },
+      { type: 'emp',        col: 149, row: 10, wTiles: 2, hTiles: 2 },
+      { type: 'corruption', col: 178, row:  8, wTiles: 2, hTiles: 2 },
+      { type: 'emp',        col: 204, row: 10, wTiles: 2, hTiles: 2 },
+    ],
+    tileBuilder: buildWorld16Tiles,
+  },
+  '1-7': {
+    name: 'World 1-7 — Archive Causeway',
+    subtitle: 'Late-world transfers above mirrored outage lanes',
+    cols: WORLD_1_7_COLS,
+    rows: LEVEL_ROWS,
+    rtoSeconds: 540,
+    playerStart: { x: 48, y: 384 },
+    goal: { col: 224, row: 2 },
+    sections: [
+      { startCol:   0, endCol:  47, label: 'Causeway Boot' },
+      { startCol:  48, endCol:  95, label: 'Mirror Ladder' },
+      { startCol:  96, endCol: 149, label: 'Relay Crest' },
+      { startCol: 150, endCol: 195, label: 'Dark Span' },
+      { startCol: 196, endCol: 231, label: 'Keep Approach' },
+    ],
+    landmarks: [
+      { col: 34,  color: '#00ddff' },
+      { col: 82,  color: '#ffaa00' },
+      { col: 126, color: '#7dffaf' },
+      { col: 176, color: '#ff9d66' },
+      { col: 224, color: '#ffd700' },
+    ],
+    orbs: [
+      { col:   6, row: 12, checkpoint: true },
+      { col:  17, row:  9 },
+      { col:  31, row:  7 },
+      { col:  44, row:  5, checkpoint: true },
+      { col:  59, row:  8 },
+      { col:  74, row:  6 },
+      { col:  87, row:  4, checkpoint: true },
+      { col: 102, row:  9 },
+      { col: 116, row:  7 },
+      { col: 130, row:  5 },
+      { col: 144, row:  3, checkpoint: true },
+      { col: 159, row:  8 },
+      { col: 173, row:  6 },
+      { col: 187, row:  4, checkpoint: true },
+      { col: 201, row:  3 },
+      { col: 216, row:  2, checkpoint: true },
+      { col: 224, row:  2 },
+    ],
+    powerups: [
+      { type: 'grow',       col:  18, row:  9 },
+      { type: 'doublejump', col:  31, row:  7 },
+      { type: 'rollback',   col:  46, row:  5 },
+      { type: 'freeze',     col:  61, row:  8 },
+      { type: 'speed',      col:  76, row:  6 },
+      { type: 'fire',       col:  89, row:  4 },
+      { type: 'immutable',  col: 105, row:  9 },
+      { type: 'grow',       col: 116, row:  7 },
+      { type: 'shield',     col: 132, row:  5 },
+      { type: 'rollback',   col: 144, row:  3 },
+      { type: 'speed',      col: 161, row:  8 },
+      { type: 'freeze',     col: 176, row:  6 },
+      { type: 'fire',       col: 191, row:  4 },
+      { type: 'life',       col: 216, row:  2 },
+    ],
+    enemies: [
+      { type: 'rogue-packet',   col:  16, row: 10, patrolLeft: 14, patrolRight: 22 },
+      { type: 'crypto-process', col:  30, row:  8, patrolLeft: 28, patrolRight: 35, amplitude: 10 },
+      { type: 'rogue-packet',   col:  43, row:  6, patrolLeft: 40, patrolRight: 47 },
+      { type: 'rogue-packet',   col:  58, row:  9, patrolLeft: 55, patrolRight: 62 },
+      { type: 'crypto-process', col:  73, row:  7, patrolLeft: 68, patrolRight: 76, amplitude: 12 },
+      { type: 'rogue-packet',   col:  86, row:  5, patrolLeft: 82, patrolRight: 89 },
+      { type: 'rogue-packet',   col: 101, row: 10, patrolLeft: 98, patrolRight: 106 },
+      { type: 'crypto-process', col: 117, row:  8, patrolLeft: 112, patrolRight: 120, amplitude: 11 },
+      { type: 'rogue-packet',   col: 129, row:  6, patrolLeft: 126, patrolRight: 134 },
+      { type: 'crypto-process', col: 143, row:  4, patrolLeft: 140, patrolRight: 148, amplitude: 8 },
+      { type: 'rogue-packet',   col: 159, row:  9, patrolLeft: 156, patrolRight: 163 },
+      { type: 'crypto-process', col: 174, row:  7, patrolLeft: 170, patrolRight: 177, amplitude: 10 },
+      { type: 'rogue-packet',   col: 187, row:  5, patrolLeft: 184, patrolRight: 191 },
+      { type: 'crypto-process', col: 214, row:  4, patrolLeft: 210, patrolRight: 219, amplitude: 8 },
+    ],
+    platforms: [
+      { col: 52,  row: 10, wTiles: 2, axis: 'y', travelTiles: 2, periodFrames: 210, phase: 0.24 },
+      { col: 96,  row:  9, wTiles: 2, axis: 'x', travelTiles: 4, periodFrames: 200, phase: 0.58 },
+      { col: 150, row:  8, wTiles: 2, axis: 'y', travelTiles: 3, periodFrames: 190, phase: 0.36 },
+      { col: 194, row:  6, wTiles: 2, axis: 'x', travelTiles: 4, periodFrames: 170, phase: 0.12 },
+    ],
+    hazards: [
+      { type: 'corruption', col:  67, row:  8, wTiles: 3, hTiles: 2 },
+      { type: 'emp',        col: 113, row:  9, wTiles: 2, hTiles: 2 },
+      { type: 'corruption', col: 141, row:  7, wTiles: 2, hTiles: 2 },
+      { type: 'emp',        col: 170, row:  8, wTiles: 2, hTiles: 2 },
+      { type: 'corruption', col: 199, row:  6, wTiles: 3, hTiles: 2 },
+    ],
+    tileBuilder: buildWorld17Tiles,
+  },
+  '1-8': {
+    name: 'World 1-8 — Recovery Keep',
+    subtitle: 'Castle lockdown and the split-brain sovereign',
+    theme: 'fortress',
+    cols: WORLD_1_8_COLS,
+    rows: LEVEL_ROWS,
+    rtoSeconds: 600,
+    playerStart: { x: 48, y: 384 },
+    goal: { col: 230, row: 2 },
+    requiresBossDefeat: true,
+    sections: [
+      { startCol:   0, endCol:  57, label: 'Outer Gate' },
+      { startCol:  58, endCol: 114, label: 'Cinder Hall' },
+      { startCol: 115, endCol: 165, label: 'Vault Stair' },
+      { startCol: 166, endCol: 193, label: 'Throne Walk' },
+      { startCol: 194, endCol: 239, label: 'Split-Brain Keep' },
+    ],
+    landmarks: [
+      { col: 36,  color: '#ff9f66' },
+      { col: 84,  color: '#ffd27a' },
+      { col: 148, color: '#7dffaf' },
+      { col: 182, color: '#ff7799' },
+      { col: 230, color: '#ffd700' },
+    ],
+    orbs: [
+      { col:   6, row: 12, checkpoint: true },
+      { col:  18, row:  9 },
+      { col:  35, row:  7 },
+      { col:  52, row:  5, checkpoint: true },
+      { col:  66, row:  9 },
+      { col:  82, row:  7 },
+      { col:  96, row:  5 },
+      { col: 110, row:  9, checkpoint: true },
+      { col: 126, row:  7 },
+      { col: 140, row:  5 },
+      { col: 152, row:  3, checkpoint: true },
+      { col: 170, row: 10 },
+      { col: 184, row:  8, checkpoint: true },
+      { col: 200, row: 10 },
+      { col: 214, row:  7 },
+      { col: 223, row:  5, checkpoint: true },
+      { col: 230, row:  2 },
+    ],
+    powerups: [
+      { type: 'grow',       col:  18, row:  9 },
+      { type: 'shield',     col:  37, row:  7 },
+      { type: 'doublejump', col:  54, row:  5 },
+      { type: 'rollback',   col:  68, row:  9 },
+      { type: 'freeze',     col:  84, row:  7 },
+      { type: 'fire',       col:  98, row:  5 },
+      { type: 'immutable',  col: 112, row:  9 },
+      { type: 'grow',       col: 126, row:  7 },
+      { type: 'shield',     col: 141, row:  5 },
+      { type: 'rollback',   col: 154, row:  3 },
+      { type: 'life',       col: 171, row: 10 },
+      { type: 'freeze',     col: 203, row: 10 },
+      { type: 'fire',       col: 219, row:  7 },
+      { type: 'immutable',  col: 227, row:  4 },
+    ],
+    enemies: [
+      { type: 'rogue-packet',        col:  18, row: 10, patrolLeft: 16, patrolRight: 23 },
+      { type: 'crypto-process',      col:  35, row:  8, patrolLeft: 33, patrolRight: 40, amplitude: 10 },
+      { type: 'rogue-packet',        col:  52, row:  6, patrolLeft: 50, patrolRight: 57 },
+      { type: 'rogue-packet',        col:  66, row: 10, patrolLeft: 62, patrolRight: 70 },
+      { type: 'crypto-process',      col:  82, row:  8, patrolLeft: 76, patrolRight: 84, amplitude: 11 },
+      { type: 'rogue-packet',        col:  96, row:  6, patrolLeft: 90, patrolRight: 98 },
+      { type: 'rogue-packet',        col: 110, row: 10, patrolLeft: 106, patrolRight: 114 },
+      { type: 'crypto-process',      col: 126, row:  8, patrolLeft: 120, patrolRight: 128, amplitude: 12 },
+      { type: 'rogue-packet',        col: 140, row:  6, patrolLeft: 134, patrolRight: 142 },
+      { type: 'rogue-packet',        col: 170, row: 11, patrolLeft: 166, patrolRight: 176 },
+      { type: 'crypto-process',      col: 184, row: 10, patrolLeft: 180, patrolRight: 190, amplitude: 8 },
+      { type: 'splitbrain-sovereign', col: 210, row: 11, arenaLeft: 198, arenaRight: 236 },
+    ],
+    platforms: [
+      { col: 58,  row: 10, wTiles: 2, axis: 'y', travelTiles: 2, periodFrames: 210, phase: 0.44 },
+      { col: 116, row:  9, wTiles: 2, axis: 'x', travelTiles: 4, periodFrames: 190, phase: 0.16 },
+      { col: 162, row: 10, wTiles: 2, axis: 'y', travelTiles: 2, periodFrames: 180, phase: 0.72 },
+    ],
+    hazards: [
+      { type: 'corruption', col:  72, row:  8, wTiles: 2, hTiles: 2 },
+      { type: 'emp',        col: 104, row:  9, wTiles: 2, hTiles: 2 },
+      { type: 'corruption', col: 136, row:  7, wTiles: 2, hTiles: 2 },
+      { type: 'emp',        col: 167, row: 10, wTiles: 2, hTiles: 2 },
+      { type: 'corruption', col: 196, row: 10, wTiles: 2, hTiles: 2 },
+      { type: 'corruption', col: 205, row: 10, wTiles: 2, hTiles: 2 },
+    ],
+    tileBuilder: buildWorld18Tiles,
+  },
+  '2-1': {
+    name: 'World 2-1 — Tidal Mirror',
+    subtitle: 'Waterlogged restore lanes, undertow fields, and floating relays',
+    theme: 'water',
+    cols: WORLD_2_1_COLS,
+    rows: LEVEL_ROWS,
+    rtoSeconds: 540,
+    playerStart: { x: 48, y: 384 },
+    goal: { col: 200, row: 4 },
+    sections: [
+      { startCol:   0, endCol:  47, label: 'Flooded Dock' },
+      { startCol:  48, endCol: 101, label: 'Undertow Reach' },
+      { startCol: 102, endCol: 151, label: 'Lagoon Shelf' },
+      { startCol: 152, endCol: 211, label: 'Mirror Reef' },
+    ],
+    landmarks: [
+      { col: 29,  color: '#7ce6ff' },
+      { col: 84,  color: '#b8fbff' },
+      { col: 132, color: '#ffd27a' },
+      { col: 176, color: '#8dffcf' },
+      { col: 200, color: '#ffe680' },
+    ],
+    orbs: [
+      { col:   6, row: 12, checkpoint: true },
+      { col:  12, row: 10 },
+      { col:  28, row:  8 },
+      { col:  45, row:  6, checkpoint: true },
+      { col:  68, row:  9 },
+      { col:  83, row:  7 },
+      { col:  97, row:  5, checkpoint: true },
+      { col: 118, row:  9 },
+      { col: 132, row:  7 },
+      { col: 147, row:  5, checkpoint: true },
+      { col: 165, row:  8 },
+      { col: 178, row:  6 },
+      { col: 194, row:  4, checkpoint: true },
+      { col: 200, row:  4 },
+    ],
+    powerups: [
+      { type: 'doublejump', col:  13, row: 10 },
+      { type: 'speed',      col:  29, row:  8 },
+      { type: 'freeze',     col:  46, row:  6 },
+      { type: 'grow',       col:  69, row:  9 },
+      { type: 'shield',     col:  84, row:  7 },
+      { type: 'rollback',   col:  98, row:  5 },
+      { type: 'fire',       col: 119, row:  9 },
+      { type: 'immutable',  col: 133, row:  7 },
+      { type: 'grow',       col: 148, row:  5 },
+      { type: 'freeze',     col: 166, row:  8 },
+      { type: 'life',       col: 179, row:  6 },
+      { type: 'shield',     col: 196, row:  4 },
+    ],
+    enemies: [
+      { type: 'tide-skimmer',   col:  13, row: 11, patrolLeft:  8, patrolRight: 16, amplitude: 10 },
+      { type: 'tide-skimmer',   col:  28, row:  9, patrolLeft: 22, patrolRight: 30, amplitude: 12 },
+      { type: 'rogue-packet',   col:  45, row:  7, patrolLeft: 40, patrolRight: 48 },
+      { type: 'tide-skimmer',   col:  68, row: 10, patrolLeft: 65, patrolRight: 73, amplitude: 10 },
+      { type: 'crypto-process', col:  82, row:  8, patrolLeft: 79, patrolRight: 87, amplitude: 9 },
+      { type: 'tide-skimmer',   col:  97, row:  6, patrolLeft: 94, patrolRight: 101, amplitude: 8 },
+      { type: 'rogue-packet',   col: 118, row: 10, patrolLeft: 114, patrolRight: 122 },
+      { type: 'tide-skimmer',   col: 132, row:  8, patrolLeft: 128, patrolRight: 136, amplitude: 10 },
+      { type: 'crypto-process', col: 147, row:  6, patrolLeft: 143, patrolRight: 151, amplitude: 8 },
+      { type: 'tide-skimmer',   col: 178, row:  8, patrolLeft: 174, patrolRight: 182, amplitude: 12 },
+      { type: 'rogue-packet',   col: 194, row:  5, patrolLeft: 188, patrolRight: 200 },
+    ],
+    platforms: [
+      { col: 54,  row: 10, wTiles: 2, axis: 'x', travelTiles: 4, periodFrames: 210, phase: 0.24 },
+      { col: 104, row:  8, wTiles: 2, axis: 'y', travelTiles: 2, periodFrames: 190, phase: 0.68 },
+      { col: 154, row:  7, wTiles: 2, axis: 'x', travelTiles: 3, periodFrames: 180, phase: 0.44 },
+    ],
+    hazards: [
+      { type: 'undertow', col:  52, row: 11, wTiles: 4, hTiles: 2, flow: 1, strength: 0.14 },
+      { type: 'undertow', col:  88, row: 10, wTiles: 4, hTiles: 2, flow: -1, strength: 0.16 },
+      { type: 'undertow', col: 124, row:  9, wTiles: 4, hTiles: 2, flow: 1, strength: 0.18 },
+      { type: 'undertow', col: 170, row:  8, wTiles: 4, hTiles: 2, flow: -1, strength: 0.18 },
+      { type: 'emp',      col: 190, row:  6, wTiles: 2, hTiles: 2 },
+    ],
+    tileBuilder: buildWorld21Tiles,
   }
 };
 
@@ -844,6 +1440,8 @@ function loadLevel(id) {
   if (!base) return null;
   world = {
     ...base,
+    themeId: base.theme || 'datacenter',
+    theme: cloneTheme(base.theme || 'datacenter'),
     playerStart: { ...base.playerStart },
     goal: { ...base.goal },
     orbs: (base.orbs || []).map(o => ({ ...o })),
@@ -974,6 +1572,7 @@ function resolveY(entity) {
 // ─── Rendering ────────────────────────────────────────────────────────────────
 function drawWorld(ctx, camX) {
   if (!world) return;
+  const theme = world.theme || THEMES.datacenter;
 
   const startCol = Math.max(0, pixToCol(camX) - 1);
   const endCol   = Math.min(world.cols, pixToCol(camX + 800) + 2);
@@ -986,34 +1585,43 @@ function drawWorld(ctx, camX) {
       const sx = col * TILE_SIZE - camX;
       const sy = row * TILE_SIZE;
 
-      // Body
-      ctx.fillStyle = tile === 2 ? '#6b4a16' : '#152d15';
+      ctx.fillStyle = tile === 2 ? theme.breakable.body : theme.tile.body;
       ctx.fillRect(sx, sy, TILE_SIZE, TILE_SIZE);
 
-      // Server rack panel lines
       if (tile === 2) {
-        ctx.fillStyle = '#9a6a22';
+        ctx.fillStyle = theme.breakable.panel;
         ctx.fillRect(sx + 4, sy + 4, TILE_SIZE - 8, 3);
         ctx.fillRect(sx + 4, sy + 13, TILE_SIZE - 8, 3);
         ctx.fillRect(sx + 4, sy + 22, TILE_SIZE - 8, 3);
-        ctx.fillStyle = '#c79133';
+        ctx.fillStyle = theme.breakable.detail;
         ctx.fillRect(sx + 5, sy + 8, 4, 4);
         ctx.fillRect(sx + 13, sy + 16, 4, 4);
         ctx.fillRect(sx + 21, sy + 8, 4, 4);
+      } else if (world.themeId === 'fortress') {
+        ctx.fillStyle = theme.tile.panel;
+        ctx.fillRect(sx + 2, sy + 8, TILE_SIZE - 4, 3);
+        ctx.fillRect(sx + 2, sy + 18, TILE_SIZE - 4, 3);
+        ctx.fillRect(sx + 8, sy + 3, 2, TILE_SIZE - 6);
+        ctx.fillRect(sx + 18, sy + 11, 2, TILE_SIZE - 12);
+      } else if (world.themeId === 'water') {
+        ctx.fillStyle = theme.tile.panel;
+        ctx.fillRect(sx + 2, sy + 8, TILE_SIZE - 4, 4);
+        ctx.fillRect(sx + 4, sy + 18, TILE_SIZE - 8, 3);
+        ctx.fillStyle = theme.tile.ledOn;
+        ctx.fillRect(sx + 6, sy + 5, 3, 3);
+        ctx.fillRect(sx + 19, sy + 20, 2, 2);
       } else {
-        ctx.fillStyle = '#1e421e';
+        ctx.fillStyle = theme.tile.panel;
         ctx.fillRect(sx + 2, sy + 6,  TILE_SIZE - 4, 4);
         ctx.fillRect(sx + 2, sy + 14, TILE_SIZE - 4, 4);
         ctx.fillRect(sx + 2, sy + 22, TILE_SIZE - 4, 4);
       }
 
-      // Top highlight (lit edge)
-      ctx.fillStyle = tile === 2 ? '#ffd27a' : '#3aaa3a';
+      ctx.fillStyle = tile === 2 ? theme.breakable.top : theme.tile.top;
       ctx.fillRect(sx, sy, TILE_SIZE, 2);
 
-      // Blinking LED (every 3rd tile in every other row)
       if (tile === 1 && (col + row) % 3 === 0) {
-        ctx.fillStyle = (Math.floor(Date.now() / 800 + col) % 2 === 0) ? '#00ff41' : '#003310';
+        ctx.fillStyle = (Math.floor(Date.now() / 800 + col) % 2 === 0) ? theme.tile.ledOn : theme.tile.ledOff;
         ctx.fillRect(sx + TILE_SIZE - 6, sy + 4, 3, 3);
       }
     }
@@ -1027,17 +1635,17 @@ function drawWorld(ctx, camX) {
   const goalLocked = !!(world.requiresBossDefeat && typeof entities !== 'undefined' && entities.enemies?.some(enemy => enemy.isBoss && !enemy.dead));
 
   ctx.fillStyle = goalLocked
-    ? `rgba(255, 80, 120, ${glow * 0.8})`
-    : `rgba(255, 200, 0, ${glow})`;
+    ? `rgba(${theme.goal.lockedBase}, ${glow * 0.8})`
+    : `rgba(${theme.goal.openBase}, ${glow})`;
   ctx.fillRect(gx, gy, 20, 28);
 
-  ctx.fillStyle = '#000';
+  ctx.fillStyle = theme.goal.label;
   ctx.font = 'bold 7px monospace';
   ctx.fillText(goalLocked ? 'LCK' : 'BCK', gx + 1, gy + 11);
   ctx.fillText(goalLocked ? 'DWN' : 'UP', gx + 3, gy + 20);
 
   if (goalLocked) {
-    ctx.strokeStyle = 'rgba(255, 170, 190, 0.75)';
+    ctx.strokeStyle = theme.goal.lockedStroke;
     ctx.lineWidth = 2;
     ctx.strokeRect(gx - 3, gy - 3, 26, 34);
   }
@@ -1045,12 +1653,13 @@ function drawWorld(ctx, camX) {
 
 function drawPlatforms(ctx, camX) {
   if (!world?.platforms) return;
+  const theme = world.theme || THEMES.datacenter;
 
   for (const platform of world.platforms) {
     const sx = Math.round(platform.x - camX);
     const sy = Math.round(platform.y);
 
-    ctx.fillStyle = 'rgba(0, 255, 200, 0.08)';
+    ctx.fillStyle = theme.platform.rail;
     if (platform.axis === 'x') {
       const minX = platform.baseX - platform.travelTiles * TILE_SIZE - camX;
       const maxX = platform.baseX + platform.travelTiles * TILE_SIZE - camX + platform.w;
@@ -1061,27 +1670,28 @@ function drawPlatforms(ctx, camX) {
       ctx.fillRect(sx + Math.round(platform.w / 2) - 2, Math.round(minY), 4, Math.round(maxY - minY));
     }
 
-    ctx.fillStyle = '#15463a';
+    ctx.fillStyle = theme.platform.body;
     ctx.fillRect(sx, sy, platform.w, platform.h);
-    ctx.fillStyle = '#2be8c1';
+    ctx.fillStyle = theme.platform.top;
     ctx.fillRect(sx, sy, platform.w, 3);
-    ctx.fillStyle = '#0d221c';
+    ctx.fillStyle = theme.platform.inset;
     ctx.fillRect(sx + 4, sy + 5, platform.w - 8, 3);
     ctx.fillRect(sx + 4, sy + 10, platform.w - 8, 1);
-    ctx.fillStyle = '#9affea';
+    ctx.fillStyle = theme.platform.light;
     ctx.fillRect(sx + 6, sy + 4, 3, 3);
     ctx.fillRect(sx + platform.w - 9, sy + 4, 3, 3);
 
-    ctx.fillStyle = '#062018';
+    ctx.fillStyle = theme.platform.label;
     ctx.font = 'bold 6px monospace';
     ctx.textAlign = 'center';
-    ctx.fillText('SYNC', sx + Math.round(platform.w / 2), sy + 9);
+    ctx.fillText(theme.platform.text, sx + Math.round(platform.w / 2), sy + 9);
     ctx.textAlign = 'left';
   }
 }
 
 function drawHazards(ctx, camX) {
   if (!world?.hazards) return;
+  const theme = world.theme || THEMES.datacenter;
 
   for (const hazard of world.hazards) {
     const sx = Math.round(hazard.x - camX);
@@ -1089,40 +1699,65 @@ function drawHazards(ctx, camX) {
     const pulse = 0.4 + 0.25 * Math.sin(Date.now() / 140 + hazard.id);
 
     if (hazard.type === 'corruption') {
-      ctx.fillStyle = `rgba(255, 30, 80, ${0.08 + pulse * 0.1})`;
+      const style = theme.hazards.corruption;
+      ctx.fillStyle = `rgba(${style.fillBase}, ${0.08 + pulse * 0.1})`;
       ctx.fillRect(sx, sy, hazard.w, hazard.h);
 
-      ctx.strokeStyle = `rgba(255, 90, 140, ${0.4 + pulse * 0.35})`;
+      ctx.strokeStyle = `rgba(${style.strokeBase}, ${0.4 + pulse * 0.35})`;
       ctx.lineWidth = 2;
       ctx.strokeRect(sx + 1, sy + 1, hazard.w - 2, hazard.h - 2);
 
-      ctx.fillStyle = `rgba(255, 180, 210, ${0.2 + pulse * 0.14})`;
+      ctx.fillStyle = `rgba(${style.stripeBase}, ${0.2 + pulse * 0.14})`;
       for (let x = sx + 4; x < sx + hazard.w - 4; x += 10) {
         ctx.fillRect(x, sy + 4, 2, hazard.h - 8);
       }
 
-      ctx.fillStyle = '#ffd6e3';
+      ctx.fillStyle = style.label;
       ctx.font = 'bold 7px monospace';
       ctx.textAlign = 'center';
-      ctx.fillText('CRC', sx + Math.round(hazard.w / 2), sy + Math.round(hazard.h / 2) + 3);
+      ctx.fillText(style.text, sx + Math.round(hazard.w / 2), sy + Math.round(hazard.h / 2) + 3);
       ctx.textAlign = 'left';
-    } else {
-      ctx.fillStyle = `rgba(255, 80, 0, ${0.08 + pulse * 0.08})`;
+    } else if (hazard.type === 'undertow') {
+      const style = theme.hazards.undertow;
+      const dir = (hazard.flow || -1) >= 0 ? 1 : -1;
+      ctx.fillStyle = `rgba(${style.fillBase}, ${0.09 + pulse * 0.08})`;
       ctx.fillRect(sx, sy, hazard.w, hazard.h);
 
-      ctx.strokeStyle = `rgba(255, 170, 0, ${0.35 + pulse * 0.35})`;
+      ctx.strokeStyle = `rgba(${style.strokeBase}, ${0.35 + pulse * 0.30})`;
       ctx.lineWidth = 2;
       ctx.strokeRect(sx + 1, sy + 1, hazard.w - 2, hazard.h - 2);
 
-      ctx.fillStyle = `rgba(255, 220, 120, ${0.18 + pulse * 0.12})`;
+      ctx.fillStyle = `rgba(${style.stripeBase}, ${0.15 + pulse * 0.16})`;
+      for (let x = sx + 5; x < sx + hazard.w - 10; x += 16) {
+        ctx.fillRect(x, sy + Math.round(hazard.h / 2) - 1, 8, 2);
+        const headX = dir > 0 ? x + 8 : x - 1;
+        ctx.fillRect(headX, sy + Math.round(hazard.h / 2) - 3, 3, 2);
+        ctx.fillRect(headX, sy + Math.round(hazard.h / 2) + 1, 3, 2);
+      }
+
+      ctx.fillStyle = style.label;
+      ctx.font = 'bold 7px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(style.text, sx + Math.round(hazard.w / 2), sy + Math.round(hazard.h / 2) + 3);
+      ctx.textAlign = 'left';
+    } else {
+      const style = theme.hazards.emp;
+      ctx.fillStyle = `rgba(${style.fillBase}, ${0.08 + pulse * 0.08})`;
+      ctx.fillRect(sx, sy, hazard.w, hazard.h);
+
+      ctx.strokeStyle = `rgba(${style.strokeBase}, ${0.35 + pulse * 0.35})`;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(sx + 1, sy + 1, hazard.w - 2, hazard.h - 2);
+
+      ctx.fillStyle = `rgba(${style.stripeBase}, ${0.18 + pulse * 0.12})`;
       for (let y = sy + 4; y < sy + hazard.h - 2; y += 8) {
         ctx.fillRect(sx + 3, y, hazard.w - 6, 2);
       }
 
-      ctx.fillStyle = '#ffdd88';
+      ctx.fillStyle = style.label;
       ctx.font = 'bold 7px monospace';
       ctx.textAlign = 'center';
-      ctx.fillText('EMP', sx + Math.round(hazard.w / 2), sy + Math.round(hazard.h / 2) + 3);
+      ctx.fillText(style.text, sx + Math.round(hazard.w / 2), sy + Math.round(hazard.h / 2) + 3);
       ctx.textAlign = 'left';
     }
   }

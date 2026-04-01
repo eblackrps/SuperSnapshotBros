@@ -54,13 +54,20 @@ Touch controls are displayed automatically on mobile devices.
 | **Immutable Backup** | One safe corruption bypass before the next restore risk |
 | **Rollback Snapshot** | One automatic restore to the last checkpoint without losing a life |
 | **Corruption Field** | Unsafe restore zone — costs a life unless protected |
+| **Undertow Field** | Lateral flow lane — drags you across flooded restore routes |
 | **+1 Powerup** | Extra Replica — bonus life |
+| **Tide Skimmer** | Water-world threat sweeping the flooded lanes |
 | **World 1-1** | *Hypervisor Crash* — the inciting incident |
 | **World 1-2** | *Replication Lag* — sync lifts and EMP pressure |
 | **World 1-3** | *Immutable Backup* — corruption routing and hardened recovery |
 | **World 1-4** | *Failover Spine* — mirrored routes and fallback transfers |
 | **World 1-5** | *Snapshot Bastion* — vault routes and the first mini-boss |
+| **World 1-6** | *Snapshot Runoff* — brittle cache lanes and overflow routing |
+| **World 1-7** | *Archive Causeway* — mirrored outage lanes before the keep |
+| **World 1-8** | *Recovery Keep* — the castle finale and the World 1 boss |
+| **World 2-1** | *Tidal Mirror* — undertow fields, floating relays, and a water-world pivot |
 | **Ransomware Warden** | DR mini-boss guarding the final vault in `1-5` |
+| **Split-Brain Sovereign** | World boss ruling the castle in `1-8` |
 
 ---
 
@@ -93,6 +100,8 @@ Touch controls are displayed automatically on mobile devices.
 - **Immutable Backup** — `IMM` lets you survive one corruption field contact and keeps `1-3` mechanical, not just visual
 - **Rollback Snapshot** — `RBK` auto-restores you to the last checkpoint without burning a life
 - **Mini-boss finale** — `1-5` ends with the Ransomware Warden and a boss health bar
+- **World boss castle** — `1-8` ends World 1 with the Split-Brain Sovereign and a locked-goal fortress arena
+- **Water-world shift** — `2-1` introduces undertow lanes, buoy lifts, and Tide Skimmer enemies
 - **Enhanced HUD** — redundancy bar, run snapshot counts, boss bar, compact mode, and optional telemetry overlay
 - **Enemy stomp** — land on Rogue Packets to squash them; chain stomps for a bounce
 - **Squash & stretch** — enemies flatten with physics-accurate deformation on stomp
@@ -138,7 +147,7 @@ Six ascending platforms form the recovery path. The gap in the ground forces you
 - **Vanilla JS** — no framework, no bundler
 - **HTML5 Canvas 2D** — all rendering via `ctx` draw calls
 - **Web Audio API** — all sound synthesised procedurally at runtime
-- **localStorage** — best World 1 run persisted locally
+- **localStorage** — best campaign run persisted locally
 
 ---
 
@@ -147,7 +156,7 @@ Six ascending platforms form the recovery path. The gap in the ground forces you
 See [`BUILD_PLAN.md`](BUILD_PLAN.md) for the full phase breakdown.
 
 Planned additions:
-- World 1-6 and 1-F (Storage Failure, Datacenter Flood, Cloud Outage, Recovery Point)
+- Build out the rest of World 2 beyond `2-1`
 - World select map (network topology style)
 - Rising Log Data mechanic (rising floor)
 - Web-font pixel art title logo
