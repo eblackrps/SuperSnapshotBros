@@ -4,7 +4,7 @@
 
 `Super Snapshot Bros` is a browser-based 2D platformer inspired by classic side-scrollers, but every mechanic is framed through Disaster Recovery. The player is a sysadmin hero racing through broken infrastructure, collecting recovery assets, restoring service, and reaching the final backup target before business continuity objectives are breached.
 
-For [anystackarchitect.com](https://anystackarchitect.com), the game is both a brand piece and an interactive teaching tool: a playful way to make DR ideas memorable.
+On [github.com/eblackrps](https://github.com/eblackrps), the game serves as a teaching experiment: a playful way to make DR ideas memorable.
 
 ---
 
@@ -302,10 +302,10 @@ The concept is succeeding if:
 - Players immediately understand the DR flavor.
 - The platforming still feels fun even if they ignore the metaphor.
 - The metaphor becomes memorable because it is mechanical, not just visual.
-- The game feels like a natural extension of [anystackarchitect.com](https://anystackarchitect.com).
+- The game feels like a natural extension of the public projects on [github.com/eblackrps](https://github.com/eblackrps).
 
 ---
 
 ## One-Sentence Vision
 
-`Super Snapshot Bros` is a playful, Mario-like disaster recovery platformer where restoring service before RTO expires is the core fantasy, and every jump, checkpoint, and powerup reinforces the resilience story behind the Any Stack Architect brand.
+`Super Snapshot Bros` is a playful, Mario-like disaster recovery platformer where restoring service before RTO expires is the core fantasy, and every jump, checkpoint, and powerup reinforces the resilience story behind the project.

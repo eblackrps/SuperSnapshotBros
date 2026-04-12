@@ -60,7 +60,7 @@ const DEFAULT_RTO_FRAMES = 300 * 60;  // 5 minutes at 60fps
 let rtoMaxFrames = DEFAULT_RTO_FRAMES;
 let rtoFrames = rtoMaxFrames;
 let gameOverCause = 'lives';
-const SITE_URL = 'https://anystackarchitect.com';
+const SITE_URL = 'https://github.com/eblackrps';
 const GAME_VERSION = 'v1.4.0';
 const LEVEL_SEQUENCE = ['1-1', '1-2', '1-3', '1-4', '1-5', '1-6', '1-7', '1-8', '2-1', '2-2', '2-3'];
 const PROGRESS_KEY = 'ssb-progress';
@@ -1613,7 +1613,7 @@ function drawComplete() {
   if (blink) {
     ctx.fillStyle = '#aaffaa';
     ctx.font      = '12px monospace';
-    ctx.fillText('[ ENTER / L: VISIT ANYSTACKARCHITECT.COM ]', W / 2, H / 2 + 150);
+    ctx.fillText('[ ENTER / L: VISIT GITHUB.COM/EBLACKRPS ]', W / 2, H / 2 + 150);
   }
 
   ctx.fillStyle = '#3a8a3a';
@@ -2183,7 +2183,7 @@ function drawTitle() {
     ctx.fillStyle   = blink ? '#00ff41' : '#005500';
     ctx.fillText('[ ENTER NEW RUN ]  [ C CONTINUE ]  [ TAB NETWORK MAP ]', W / 2, cardY + cardH - 28);
     ctx.font = '10px monospace';
-    ctx.fillText('[ L ANYSTACKARCHITECT.COM ]', W / 2, cardY + cardH - 12);
+    ctx.fillText('[ L GITHUB.COM/EBLACKRPS ]', W / 2, cardY + cardH - 12);
     ctx.shadowBlur  = 0;
   }
 

@@ -6,7 +6,7 @@ Build `World 1` into a polished, website-ready Disaster Recovery platformer arc 
 
 1. teaches the core fantasy of restoring service under pressure,
 2. feels fun even without the DR context,
-3. gives [anystackarchitect.com](https://anystackarchitect.com) a memorable interactive centerpiece.
+3. gives [github.com/eblackrps](https://github.com/eblackrps) a memorable interactive centerpiece.
 
 This roadmap assumes the current project already has:
 
@@ -422,7 +422,7 @@ Recommended cadence:
 
 Deliverable:
 
-- the game feels native to `anystackarchitect.com`.
+- the game feels native to `github.com/eblackrps`.
 
 Tasks:
 
@@ -555,5 +555,5 @@ World 1 is done when:
 - the platforming feels fun on its own,
 - each level has a distinct DR identity,
 - the final fortress feels like a payoff,
-- the game naturally points people back to [anystackarchitect.com](https://anystackarchitect.com),
-- you would be proud to embed it on the homepage.
+- the game naturally points people back to [github.com/eblackrps](https://github.com/eblackrps),
+- you would be proud to feature it publicly.
